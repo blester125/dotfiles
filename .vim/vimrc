@@ -1,0 +1,194 @@
+call plug#begin('~/.vim/plugged')
+
+Plug 'tpope/vim-sensible'
+Plug 'nvie/vim-flake8'
+Plug 'vim-scripts/indentpython.vim'
+Plug 'scrooloose/nerdtree'
+Plug 'scrooloose/nerdtree-git-plugin'
+Plug 'tmhedberg/SimpylFold'
+Plug 'airblade/vim-gitgutter'
+Plug 'davidhalter/jedi-vim'
+Plug 'w0rp/ale'
+Plug 'tpope/vim-commentary'
+Plug 'ervandew/supertab'
+Plug 'tpope/vim-surround'
+Plug 'terryma/vim-smooth-scroll'
+Plug 'kien/ctrlp.vim'
+
+call plug#end()
+
+set ruler
+
+set tabstop=4
+set expandtab
+set shiftwidth=4
+
+set fileformat=unix
+set encoding=utf8
+set ai
+
+set smartcase
+set showmatch
+set mat=2
+
+set spell spelllang=en_us
+set spellcapcheck=
+hi clear spellCap
+hi clear SpellRare
+hi clear SpellLocal
+hi clear SpellBad
+hi SpellBad cterm=underline
+hi SpellRare cterm=none
+hi SpellCap cterm=none
+hi SpellLocal cterm=none
+
+"Use cython highlighting in pyd files
+au BufRead,BufNewFile *.pyd set filetype=pyrex
+
+set hlsearch
+
+"enable folding
+"set foldcolumn=1
+set foldmethod=indent
+set foldlevel=99
+let g:SimpylFold_doc_string_preview=1
+
+syntax enable
+set background=dark
+
+set nobackup
+set nowb
+set noswapfile
+
+set wrap
+
+set clipboard=unnamedplus
+
+"Window behavior
+set splitbelow
+set splitright
+nnoremap <C-H> <C-W><C-H>
+nnoremap <C-J> <C-W><C-J>
+nnoremap <C-K> <C-W><C-K>
+nnoremap <C-L> <C-W><C-L>
+
+" I often keep holding shift when I try to quit
+command! Q q
+command! W w
+
+"map <Left> <Nop>
+"map <Right> <Nop>
+"map <Up> <Nop>
+"map <Down> <Nop>
+
+"map <LeftMouse> <Nop>
+"map <MiddleMouse> <Nop>
+"map <RightMouse> <Nop>
+
+"NERDTree
+autocmd StdinReadPre * let s:std_in=1
+autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists("s:std_in") | exe 'NERDTree' argv()[0] | wincmd p | ene | endif
+autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
+" Hide *.pyc, __pycache__, and .egg files in nerdtree
+let NERDTreeIgnore=['\.pyc$', '\~$', '__pycache__', 'MachineLearning.egg-info', '\.DS_Store', '\~$', '\.swp', '.git', '.mypy_cache', 'build']
+" Open Nerdtree automatically
+autocmd vimenter * NERDTree
+autocmd vimenter * wincmd w
+" Close Nerdtree if no files specified
+autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
+
+let NERDTreeMapActivateNode=';'
+let NERDTreeShowHidden=1
+
+let g:NERDSpaceDelims=1
+let g:NERDCommentEmptyLines=1
+
+set cursorline
+hi CursorLine ctermbg=8 cterm=None
+set cursorcolumn
+hi CursorColumn ctermbg=8
+
+"Highlight the first character over 80
+highlight ColorColumn ctermbg=magenta
+call matchadd('ColorColumn', '\%81v', 100)
+"Highlight training whitespace
+highlight ExtraWhitespace ctermbg=darkgreen
+match ExtraWhitespace /\s\+\%#\@<!$/
+autocmd BufWinEnter * match ExtraWhitespace /\s\+$/
+autocmd InsertEnter * match ExtraWhitespace /\s\+\%#\@<!$/
+autocmd InsertLeave * match ExtraWhitespace /\s\+$/
+autocmd BufWinLeave * call clearmatches()
+
+let g:NERDSpaceDelims=1
+let g:NERDCommentEmptyLines=1
+
+"Line Numbering
+set number relativenumber
+augroup numbertoggle
+    autocmd!
+    autocmd BufEnter,FocusGained,InsertLeave * set relativenumber
+    autocmd BufLeave,FocusLost,InsertEnter * set norelativenumber
+augroup END
+
+inoremap        (  ()<Left>
+inoremap <expr> )  strpart(getline('.'), col('.')-1, 1) == ")" ? "\<Right>" : ")"
+
+inoremap        {  {}<Left>
+inoremap <expr> }  strpart(getline('.'), col('.')-1, 1) == "}" ? "\<Right>" : "}"
+
+inoremap        [  []<Left>
+inoremap <expr> ]  strpart(getline('.'), col('.')-1, 1) == "]" ? "\<Right>" : "]"
+
+inoremap <expr> ' strpart(getline('.'), col('.')-1, 1) == "\'" ? "\<Right>" : "\'\'\<Left>"
+
+inoremap <expr> " strpart(getline('.'), col('.')-1, 1) == "\"" ? "\<Right>" : "\"\"\<Left>"
+
+" ALE
+let g:ale_linters = {'python': ['pycodestyle', 'pylint']}
+let g:ale_python_pycodestyle_executable = 'pycodestyle'
+let g:ale_python_pycodestyle_options = '--config=$HOME/.pycodestyle'
+let g:ale_python_pylint_options = '--rcfile=$HOME/.pylintrc'
+let g:ale_sign_warning = '▲'
+let g:ale_sign_error = '✗'
+let g:ale_sign_column_always=1
+highlight link ALEWarningSign String
+highlight link ALEErrorSign Title"
+
+"ctags
+map <A-]> :vsp <CR>:exec("tag ".expand("<cword>"))<CR>
+
+if has('cscope')
+  set cscopetag cscopeverbose
+
+  if has('quickfix')
+    set cscopequickfix=s-,c-,d-,i-,t-,e-
+  endif
+
+  cnoreabbrev csa cs add
+  cnoreabbrev csf cs find
+  cnoreabbrev csk cs kill
+  cnoreabbrev csr cs reset
+  cnoreabbrev css cs show
+  cnoreabbrev csh cs help
+
+  command -nargs=0 Cscope cs add $VIMSRC/src/cscope.out $VIMSRC/src
+endif
+
+"Virtualenv
+"let g:virtualenv#directory="/home/blester"
+noremap Q !!$SHELL<CR>
+
+let g:jedi#show_call_signatures = "2"
+let g:jedi#popup_select_first = 0
+let g:jedi#smart_auto_mappings = 0
+
+"turn off bracket paste mode
+set t_BE=
+
+"Ctrlp
+set wildignore+=*/tmp/*,*.so,*.swp,*.zip,*/__pycache__/*,*/.git/*     " MacOSX/Linux
+let g:ctrlp_custom_ignore = {
+  \ 'dir':  '\v[\/]\.(git|hg|svn)$',
+  \ 'file': '\v\.(pyc|exe|so|dll)$',
+  \ 'link': '',
+  \ }
