@@ -122,7 +122,8 @@ bindsym $mod+Shift+c reload
 bindsym $mod+Shift+r restart
 # exit i3 (logs you out of your X session)
 #bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -b 'Yes, exit i3' 'i3-msg exit'"
-bindsym $mod+Shift+e exit
+bindsym $mod+Shift+e exec "gsettings set org.gnome.desktop.background show-desktop-icons true"; exit
+
 
 # resize window (you can also use the mouse for that)
 mode "resize" {
@@ -160,9 +161,9 @@ bar {
 }
 
 # Pulse Audio controls
-bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume 2 +5% #increase sound volume
-bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume 2 -5% #decrease sound volume
-bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute 2 toggle # mute sound
+bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume 0 +5% #increase sound volume
+bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume 0 -5% #decrease sound volume
+bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute 0 toggle # mute sound
 
 # Sreen brightness controls
 bindsym XF86MonBrightnessUp exec xbacklight -inc 20 # increase screen brightness
@@ -183,8 +184,7 @@ bindsym $MOD+Control+1 exec nautilus
 bindsym $MOD+Control+2 exec firefox
 bindsym $MOD+Control+3 exec trove-beta
 bindsym $MOD+Control+4 exec slack
-bindsym $MOD+Control+5 exec atom
-bindsym $MOD+Control+6 exec google-chrome
+bindsym $MOD+Control+5 exec mendeleydesktop
 
 # Screenshots
 # The path needs to exist for this to work.
@@ -194,3 +194,6 @@ bindsym --release Print exec "scrot -m /home/brian/Pictures/screenshots/%s_%H%M_
 bindsym --release Shift+Print exec "scrot -s /home/brian/Pictures/screenshots/%s_%H%M_%d%m%Y_$wx$h.png"
 # Screenshot the active window
 bindsym --release Control+Print exec "scrot -u /home/brian/Pictures/screenshots/%s_%H%M_%d%m%Y_$wx$h.png"
+
+# Start up
+exec "gsettings set org.gnome.desktop.background show-desktop-icons false"
