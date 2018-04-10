@@ -1,0 +1,10 @@
+# Monitor based functions
+# Sager laptop based set up
+RIGHT='DP-1'
+LEFT='DP-3'
+MAIN='eDP-1-1'
+
+function laptop() { xrandr --auto; }
+function work() { xrandr --auto; xrandr --output "$RIGHT" --left-of "$MAIN"; xrandr --output "$LEFT" --left-of "$RIGHT"; }
+
+"$@"

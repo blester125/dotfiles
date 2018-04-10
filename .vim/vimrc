@@ -124,9 +124,6 @@ autocmd InsertEnter * match ExtraWhitespace /\s\+\%#\@<!$/
 autocmd InsertLeave * match ExtraWhitespace /\s\+$/
 autocmd BufWinLeave * call clearmatches()
 
-let g:NERDSpaceDelims=1
-let g:NERDCommentEmptyLines=1
-
 "Line Numbering
 set number relativenumber
 augroup numbertoggle
