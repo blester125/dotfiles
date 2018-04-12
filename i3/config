@@ -189,11 +189,11 @@ bindsym $MOD+Control+5 exec mendeleydesktop
 # Screenshots
 # The path needs to exist for this to work.
 # Screenshot everything
-bindsym --release Print exec "scrot -m /home/brian/Pictures/screenshots/%s_%H%M_%d.%m.%Y_$wx$h.png"
+bindsym --release Print exec "scrot -m $HOME/Pictures/screenshots/%s_%H%M_%d.%m.%Y_$wx$h.png"
 # Screenshot the window you click on or drag and screenshot an area
-bindsym --release Shift+Print exec "scrot -s /home/brian/Pictures/screenshots/%s_%H%M_%d%m%Y_$wx$h.png"
+bindsym --release Shift+Print exec "scrot -s $HOME/Pictures/screenshots/%s_%H%M_%d%m%Y_$wx$h.png"
 # Screenshot the active window
-bindsym --release Control+Print exec "scrot -u /home/brian/Pictures/screenshots/%s_%H%M_%d%m%Y_$wx$h.png"
+bindsym --release Control+Print exec "scrot -u $HOME/Pictures/screenshots/%s_%H%M_%d%m%Y_$wx$h.png"
 
 # Start up
 exec "gsettings set org.gnome.desktop.background show-desktop-icons false"
