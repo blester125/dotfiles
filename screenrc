@@ -1,0 +1,3 @@
+vbell off
+defscrollback 5000
+hardstatus alwayslastline '%{rk}%H %{wk}%?%-Lw%?%{bw}%n*%f %t%?(%u)%?%{wk}%?%+Lw%?'
