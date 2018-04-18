@@ -104,6 +104,7 @@ autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTree
 
 let NERDTreeMapActivateNode=';'
 let NERDTreeShowHidden=1
+let g:NERDTreeWinSize=15
 
 let g:NERDSpaceDelims=1
 let g:NERDCommentEmptyLines=1
