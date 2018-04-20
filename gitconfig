@@ -1,0 +1,14 @@
+[alias]
+	name = rev-parse --abbrev-ref HEAD
+	clean-local = "!git rebase -i $(git merge-base HEAD origin/$(git name))"
+	clean-branch = "!git rebase -i $(git merge-base HEAD origin/master)"
+	workon-new = "!f() { local location=$(echo $1 | tr . -); git worktree add -b $1 ../$location origin/master; cd ../$location; git push -u origin $1; echo \"set up branch $1 at ../$location\"; }; f"
+	workon-existing = "!f() { local location=$(echo $1 | tr . -); git worktree add ../$location $1; cd ../$location; git push -u origin $1; echo \"set up branch $1 at ../$location\"; }; f"
+	parent = "!git rev-parse --git-dir | awk -F/ '{ print $(NF-3)  }'"
+[push]
+	default = simple
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
