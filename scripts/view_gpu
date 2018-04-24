@@ -1,0 +1,21 @@
+#!/usr/bin/python3
+
+import re
+from subprocess import run, PIPE
+
+NVIDIA = "nvidia-smi"
+
+results = run(NVIDIA, stdout=PIPE).stdout.decode('utf-8').split('\n')
+
+gpu_match = re.compile(r"\|   ([0-9]?[0-9])  ")
+util_match = re.compile("(1?[0-9]?[0-9]%)      Default")
+
+print("\033[2K", end="\r")
+for result, next_result in zip(results, results[1:]):
+    gpu = gpu_match.search(result)
+    if gpu is not None:
+        gpu = gpu.group(1)
+        utilization = util_match.search(next_result)
+        if utilization is not None:
+            utilization = utilization.group(1)
+            print("({}-{})".format(gpu, utilization), end=" ")
