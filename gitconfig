@@ -7,6 +7,8 @@
 	parent = "!git rev-parse --git-dir | awk -F/ '{ print $(NF-3)  }'"
 [push]
 	default = simple
+[core]
+    editor = vim
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
