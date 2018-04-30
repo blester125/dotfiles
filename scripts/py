@@ -1,0 +1,34 @@
+#!/bin/bash
+
+touch $1
+
+cat << EOF > $1
+
+
+def main():
+    pass
+
+
+if __name__ == "__main__":
+    main()
+EOF
+
+
+# cat << EOF > $1
+# """"""
+
+# # [ Imports ]
+# # [ -Python ]
+
+# # [ -Third Party ]
+
+# # [ -Project ]
+
+
+# def main():
+#     pass
+
+
+# if __name__ == "__main__":
+#     main()
+# EOF
