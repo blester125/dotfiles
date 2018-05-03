@@ -17,3 +17,5 @@
 [user]
 	email = blester125@gmail.com
 	name = Brian Lester
+[credential]
+	helper = store
