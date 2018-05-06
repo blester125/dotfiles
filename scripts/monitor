@@ -6,5 +6,6 @@ MAIN='eDP-1-1'
 
 function laptop() { xrandr --auto; }
 function work() { xrandr --auto; xrandr --output "$RIGHT" --left-of "$MAIN"; xrandr --output "$LEFT" --left-of "$RIGHT"; }
+function desktop() { xrandr --output HDMI-0 --right-of DP-5; }
 
 "$@"
