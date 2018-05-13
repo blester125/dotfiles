@@ -6,6 +6,6 @@ PURPLE="\[\033[35;1m\]"
 BLUE="\[\033[34;1m\]"
 GREEN="\[\033[32;1m\]"
 
-source $HOME/scripts/git-prompt.sh
+source $HOME/.bin/git-prompt.sh
 
 export PS1="${debian_chroot:+($debian_chroot)}${GREEN}\u@\h${NORMAL}:${BLUE}\w${PURPLE}\$(__git_ps1)${NORMAL}$ "
