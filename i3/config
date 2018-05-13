@@ -178,7 +178,7 @@ bindsym XF86AudioNext exec playerctl next
 bindsym XF86AudioPrev exec playerctl previous
 
 # Lock Screen
-bindsym $MOD+Control+l exec $HOME/scripts/i3lock_wrapper
+bindsym $MOD+Control+l exec $HOME/.bin/i3lock_wrapper
 
 # Application Shortcuts
 bindsym $MOD+Control+1 exec nautilus
