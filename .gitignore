@@ -2,3 +2,4 @@ vim/autoload/
 vim/plugged
 bashrc
 scripts/vpn
+__pycache__
