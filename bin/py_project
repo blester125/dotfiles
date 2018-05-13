@@ -35,8 +35,8 @@ echo "$license" > LICENSE.txt
 
 project_print=$(snake_case_to_title $project_name)
 readme=$(cat <<EOF
-"# $project_print"
-[![Build Status](https://travis-ci.com/$uname/$project_name.svg?branch=master)](https://travis-ci.com/$uname/$project_name)
+# $project_print
+<!---[![Build Status](https://travis-ci.com/$uname/$project_name.svg?branch=master)](https://travis-ci.com/$uname/$project_name)--->
 EOF
 )
 
@@ -134,6 +134,20 @@ EOF
 )
 
 echo "$setup" > setup.py
+
+travis=$(cat << EOF
+language: python
+python:
+    - "3.6"
+install:
+    - "pip install -e .[test]"
+script: pytest
+notifications:
+    email: false
+EOF
+)
+
+echo "$travis" > .travis.yml
 
 mkdir $project_name
 cd $project_name
