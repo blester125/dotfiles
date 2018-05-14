@@ -1,5 +1,5 @@
 vim/autoload/
 vim/plugged
 bashrc
-scripts/vpn
+bin/vpn
 __pycache__
