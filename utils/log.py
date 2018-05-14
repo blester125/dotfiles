@@ -1,12 +1,45 @@
 import os
+import re
 import logging
+import datetime
 from colors import Colors
 
 # Default logging strings
 date_string = "%m-%d-%YT%H:%M:%S"
 default_string = '{levelname}: {name}: {asctime}: {message}'
-thread_string = '{asctime} {name}: {levelname}: {threadName} {message}'
+thread_string = '{levelname}: {name}: {asctime}: {threadName}: {message}'
 
+log_regex = re.compile(r'\033\[\d\d;1m(DEBUG|INFO|WARNING|ERROR|CRITICAL): (.*?): (\d\d-\d\d-\d\d\d\dT\d\d:\d\d:\d\d): (.*)\033\[0m$')
+thread_regex = re.compile(r'\033\[\d\d;1m(DEBUG|INFO|WARNING|ERROR|CRITICAL): (.*?): (\d\d-\d\d-\d\d\d\dT\d\d:\d\d:\d\d): (.*?): (.*)\033\[0m$')
+
+def default_parse(line, regex=log_regex, frmt=date_string):
+    m = regex.match(line)
+    if m is None:
+        return m
+    return {
+        'level': m.groups()[0],
+        'name': m.groups()[1],
+        'date': datetime.datetime.strptime(m.groups()[2], frmt),
+        'message': m.groups()[3],
+    }
+
+def thread_parse(line, regex=thread_regex, frmt=date_string):
+    m = regex.match(line)
+    if m is None:
+        return m
+    return {
+        'level': m.groups()[0],
+        'name': m.groups()[1],
+        'date': datetime.datetime.strptime(m.groups()[2], frmt),
+        'thread': m.groups()[3]
+        'message': m.groups()[4],
+    }
+
+def parse_log(log, log_parser=default_parse):
+    with open(log) as f:
+        for line in f:
+            line = line.rstrip("\n")
+            yield default_parse(line)
 
 class BraceMessage(object):
     """Class to allow for use of str.format in logs.
