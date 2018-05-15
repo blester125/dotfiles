@@ -31,7 +31,7 @@ def thread_parse(line, regex=thread_regex, frmt=date_string):
         'level': m.groups()[0],
         'name': m.groups()[1],
         'date': datetime.datetime.strptime(m.groups()[2], frmt),
-        'thread': m.groups()[3]
+        'thread': m.groups()[3],
         'message': m.groups()[4],
     }
 
