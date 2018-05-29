@@ -36,6 +36,7 @@ echo "$license" > LICENSE.txt
 project_print=$(snake_case_to_title $project_name)
 readme=$(cat <<EOF
 # $project_print
+
 <!---[![Build Status](https://travis-ci.com/$uname/$project_name.svg?branch=master)](https://travis-ci.com/$uname/$project_name)--->
 EOF
 )

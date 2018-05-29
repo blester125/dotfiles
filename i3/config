@@ -198,3 +198,4 @@ bindsym --release Control+Print exec "scrot -u $HOME/Pictures/screenshots/%s_%H%
 
 # Start up
 exec "gsettings set org.gnome.desktop.background show-desktop-icons false"
+exec "nm-applet"
