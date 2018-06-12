@@ -8,7 +8,6 @@ from colors import Colors
 date_string = "%m-%d-%YT%H:%M:%S"
 default_string = '{levelname}: {name}: {asctime}: {message}'
 thread_string = '{levelname}: {name}: {asctime}: {threadName}: {message}'
-
 log_regex = re.compile(r'\033\[\d\d;1m(DEBUG|INFO|WARNING|ERROR|CRITICAL): (.*?): (\d\d-\d\d-\d\d\d\dT\d\d:\d\d:\d\d): (.*)\033\[0m$')
 thread_regex = re.compile(r'\033\[\d\d;1m(DEBUG|INFO|WARNING|ERROR|CRITICAL): (.*?): (\d\d-\d\d-\d\d\d\dT\d\d:\d\d:\d\d): (.*?): (.*)\033\[0m$')
 
