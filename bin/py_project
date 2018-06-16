@@ -59,6 +59,7 @@ __pycache__/
 *.p
 *.npy
 */data/*
+.mypy_cache/
 EOF
 )
 
