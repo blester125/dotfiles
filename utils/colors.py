@@ -49,5 +49,4 @@ if __name__ == "__main__":
     print_green("GREEN", end=' ')
     print_black("BLACK", end=' ')
     print_cyan("CYAN", end=' ')
-    print_brown("BROWN", end=' ')
     print("NORMAL")

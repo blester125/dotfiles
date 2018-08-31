@@ -195,3 +195,6 @@ let g:ctrlp_custom_ignore = {
   \ 'file': '\v\.(pyc|exe|so|dll)$',
   \ 'link': '',
   \ }
+" crtl-o runs ctrlp from the current working directory (useful for when you
+" are a submodule for a large git project and only want to search below you).
+noremap <C-o> :CtrlP :pwd<CR>
