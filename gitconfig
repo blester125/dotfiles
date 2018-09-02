@@ -19,3 +19,5 @@
 	name = Brian Lester
 [credential]
 	helper = store
+[credential "https://bitbucket.org"]
+    helper = store
