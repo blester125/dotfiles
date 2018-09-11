@@ -1,3 +1,5 @@
+"""Quick tools for print in color on terminals that use ANSI codes. Python3 only."""
+
 from enum import Enum
 from functools import partial
 

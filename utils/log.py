@@ -1,3 +1,5 @@
+"""Colored logging in Python 3. Includes parsing regex to extract data."""
+
 import os
 import re
 import logging

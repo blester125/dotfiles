@@ -244,3 +244,5 @@ unigram
 visdom
 Perceptron
 perceptrons
+yaml
+tmux

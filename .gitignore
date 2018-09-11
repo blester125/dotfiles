@@ -3,3 +3,4 @@ vim/plugged
 bashrc
 bin/vpn
 __pycache__
+*.spl

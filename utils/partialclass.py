@@ -1,3 +1,5 @@
+"""Create a partial application of a class, lets you set default params in the init."""
+
 import functools
 
 def partialclass(cls, *args, **kwargs):
