@@ -1,3 +1,5 @@
+mkdir -p $HOME/.config
+
 ln -snf $HOME/.shellrc/i3 $HOME/.config/i3
 ln -snf $HOME/.shellrc/i3status $HOME/.config/i3status
 ln -snf $HOME/.shellrc/bin $HOME/.bin
