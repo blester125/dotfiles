@@ -1,0 +1,28 @@
+#! /bin/bash
+
+RED="\033[1;31m"
+YELLOW="\033[1;33m"
+NORMAL="\033[0m"
+
+SESSION_TYPE=""
+
+if [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ] || [ -n "$SSH_CONNECTION" ]; then
+    SESSION_TYPE="SSH"
+fi
+
+case $(ps -o comm= -p $PPID) in
+    sshd|*/sshd) echo "Set from ps"; SESSION_TYPE="SSH";;
+esac
+
+if [ "$SESSION_TYPE" = "SSH" ]; then
+    printf "${RED}Warning! You are trying to power down while connected via SSH!${NORMAL}\n"
+fi
+
+printf "Are you sure you want to power down ${YELLOW}$(hostname -s)${NORMAL}?\n"
+select yn in "Yes" "No"; do
+    case $yn in
+        Yes ) $(shutdown -P now); break;;
+        # Yes ) echo "Shutting down."; break;;
+        No ) exit;;
+    esac
+done
