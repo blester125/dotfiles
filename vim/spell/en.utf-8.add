@@ -246,3 +246,17 @@ Perceptron
 perceptrons
 yaml
 tmux
+cuda
+cudnn
+hpctl
+GloVe
+backend
+frontends
+backends
+frontend
+Configs
+tokenization
+Treebank
+tokenizer
+fasttext
+Conv
