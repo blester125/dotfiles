@@ -260,3 +260,10 @@ Treebank
 tokenizer
 fasttext
 Conv
+vectorizers
+Pytorch
+pytorch
+vectorizer
+segmenter
+vectorize
+viterbi

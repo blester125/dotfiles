@@ -8,5 +8,6 @@ function laptop() { xrandr --auto; }
 function work() { xrandr --auto; xrandr --output "$RIGHT" --left-of "$MAIN"; xrandr --output "$LEFT" --left-of "$RIGHT"; }
 function desktop() { xrandr --output HDMI-0 --right-of DP-5; }
 function wfh() { xrandr --output HDMI-0 --right-of eDP-1-1; }
+function northville() { xrandr --output HDMI-0 --above eDP-1-1; xrandr --output DP-1 --left-of HDMI-0; }
 
 "$@"

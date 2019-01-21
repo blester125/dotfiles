@@ -19,6 +19,7 @@ Plug 'ervandew/supertab'
 Plug 'tpope/vim-surround'
 Plug 'terryma/vim-smooth-scroll'
 Plug 'kien/ctrlp.vim'
+Plug 'aserebryakov/vim-todo-lists'
 
 call plug#end()
 
@@ -95,7 +96,9 @@ autocmd StdinReadPre * let s:std_in=1
 autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists("s:std_in") | exe 'NERDTree' argv()[0] | wincmd p | ene | endif
 autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
 " Hide *.pyc, __pycache__, and .egg files in nerdtree
-let NERDTreeIgnore=['\.pyc$', '\~$', '__pycache__', 'MachineLearning.egg-info', '\.DS_Store', '\~$', '\.swp', '.git', '.mypy_cache', 'build']
+let NERDTreeIgnore=['\.pyc$', '\~$', '__pycache__', 'MachineLearning.egg-info', '\.DS_Store', '\~$', '\.swp', '.git', '.mypy_cache', 'build', 'reporting-*.log', 'timing-*.log']
+set wildignore+=reporting-*.log,timing-*.log
+let NERDTreeRespectWildIgnore=1
 " Open Nerdtree automatically
 autocmd vimenter * NERDTree
 autocmd vimenter * wincmd w
@@ -104,7 +107,7 @@ autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTree
 
 let NERDTreeMapActivateNode=';'
 let NERDTreeShowHidden=1
-let g:NERDTreeWinSize=15
+let g:NERDTreeWinSize=20
 
 let g:NERDSpaceDelims=1
 let g:NERDCommentEmptyLines=1
