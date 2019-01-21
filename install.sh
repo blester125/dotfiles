@@ -16,3 +16,7 @@ if [ ! -L $HOME/.bashrc ]; then
     cat bashrc_add >> bashrc
     ln -snf $HOME/.shellrc/bashrc $HOME/.bashrc
 fi
+
+git clone https://github.com/blester125/mnist.git
+mv mnist/mnist/mnist.py $HOME/.bin
+rm -rf mnist
