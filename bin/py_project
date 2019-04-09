@@ -74,10 +74,10 @@ import re
 from setuptools import setup, find_packages
 
 def get_version(project_name):
-    regex = re.compile(r"^__version__ = '(\d+\.\d+\.\d+(?:a|b|rc)?(?:\d)*?)'$")
+    regex = re.compile(r"""^__version__ = ["'](\d+\.\d+\.\d+(?:a|b|rc)?(?:\d)*?)["']$""")
     with open(f"{project_name}/__init__.py") as f:
         for line in f:
-            m = regex.match(line)
+            m = regex.match(line.rstrip("\n"))
             if m is not None:
                 return m.groups(1)[0]
 

@@ -20,6 +20,7 @@ Plug 'tpope/vim-surround'
 Plug 'terryma/vim-smooth-scroll'
 Plug 'kien/ctrlp.vim'
 Plug 'aserebryakov/vim-todo-lists'
+Plug 'leafgarland/typescript-vim'
 
 call plug#end()
 

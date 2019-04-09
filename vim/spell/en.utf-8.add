@@ -267,3 +267,14 @@ vectorizer
 segmenter
 vectorize
 viterbi
+nifi
+nlp
+pretraining
+ontonotes
+perceptron
+depthwise
+addon
+lowercasing
+servable
+Kneser
+Ney
