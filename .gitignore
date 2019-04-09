@@ -5,3 +5,5 @@ bin/vpn
 __pycache__
 *.spl
 bin/mnist.py
+search
+sr

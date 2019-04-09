@@ -10,6 +10,8 @@ ln -snf $HOME/.shellrc/bash_aliases $HOME/.bash_aliases
 ln -snf $HOME/.shellrc/bash_profile $HOME/.bash_profile
 ln -snf $HOME/.shellrc/screenrc $HOME/.screenrc
 ln -snf $HOME/.shellrc/gitconfig $HOME/.gitconfig
+ln -snf $HOME/.bin/search.py $HOME/.bin/search
+ln -snf $HOME/.bin/search.py $HOME/.bin/sr
 
 if [ ! -L $HOME/.bashrc ]; then
     cp $HOME/.bashrc bashrc
