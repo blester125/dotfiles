@@ -198,3 +198,10 @@ bindsym --release Control+Print exec "scrot -u $HOME/Pictures/screenshots/%s_%H%
 # Start up
 exec "gsettings set org.gnome.desktop.background show-desktop-icons false"
 exec "nm-applet"
+
+# Search Stuff
+bindsym $MOD+n exec search_highlighted
+bindsym $MOD+Shift+n exec search_gui_highlighted
+bindsym $MOD+Shift+m exec search_gui
+bindsym $MOD+m exec search_gui
+# bindsym $MOD+m exec i3-input -F "exec search %s"
