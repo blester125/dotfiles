@@ -8,3 +8,5 @@ alias nvidia_audio="pactl list sinks | pcregrep -M --only-matching=1 'Sink #(\d)
 alias active_audio="pactl list sinks | pcregrep -M --only-matching=1 'Sink #(\d)\n.*Status: RUNNING\n'"
 alias open="xdg-open"
 alias sqlite="sqlite3 -column -header"
+alias k="microk8s.kubectl"
+alias kubectl="microk8s.kubectl"

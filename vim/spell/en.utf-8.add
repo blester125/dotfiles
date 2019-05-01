@@ -278,3 +278,14 @@ lowercasing
 servable
 Kneser
 Ney
+PersistentVolume
+persistentVolumeClaim
+claimName
+args
+containerPort
+volumeMounts
+mountPath
+apiVersion
+k8s
+microk8s
+kubernetes

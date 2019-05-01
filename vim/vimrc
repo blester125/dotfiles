@@ -9,12 +9,12 @@ Plug 'tpope/vim-sensible'
 Plug 'nvie/vim-flake8'
 Plug 'vim-scripts/indentpython.vim'
 Plug 'scrooloose/nerdtree'
-Plug 'scrooloose/nerdtree-git-plugin'
+Plug 'Xuyuanp/nerdtree-git-plugin'
 Plug 'tmhedberg/SimpylFold'
 Plug 'airblade/vim-gitgutter'
 Plug 'davidhalter/jedi-vim'
-Plug 'w0rp/ale'
 Plug 'tpope/vim-commentary'
+Plug 'w0rp/ale'
 Plug 'ervandew/supertab'
 Plug 'tpope/vim-surround'
 Plug 'terryma/vim-smooth-scroll'
@@ -120,10 +120,14 @@ set cursorcolumn
 hi CursorColumn ctermbg=8
 
 "Highlight the first character over 80
-highlight ColorColumn ctermbg=magenta
-call matchadd('ColorColumn', '\%81v', 100)
+highlight 80Column ctermbg=darkgreen ctermfg=black
+highlight 100Column ctermbg=darkyellow ctermfg=black
+highlight 120Column ctermbg=darkred ctermfg=black
+call matchadd('80Column', '\%81v', -1)
+call matchadd('100Column', '\%101v', -1)
+call matchadd('120Column', '\%121v', -1)
 "Highlight training whitespace
-highlight ExtraWhitespace ctermbg=darkgreen
+highlight ExtraWhitespace ctermbg=green
 match ExtraWhitespace /\s\+\%#\@<!$/
 autocmd BufWinEnter * match ExtraWhitespace /\s\+$/
 autocmd InsertEnter * match ExtraWhitespace /\s\+\%#\@<!$/
@@ -152,13 +156,12 @@ inoremap <expr> ' strpart(getline('.'), col('.')-1, 1) == "\'" ? "\<Right>" : "\
 inoremap <expr> " strpart(getline('.'), col('.')-1, 1) == "\"" ? "\<Right>" : "\"\"\<Left>"
 
 " ALE
-let g:ale_linters = {'python': ['pycodestyle', 'pylint']}
+let g:ale_linters = {'python': ['pylint']}
 let g:ale_python_pycodestyle_executable = 'pycodestyle'
 let g:ale_python_pycodestyle_options = '--config=$HOME/.pycodestyle'
-let g:ale_python_pylint_options = '--rcfile=$HOME/.pylintrc'
 let g:ale_sign_warning = '▲'
 let g:ale_sign_error = '✗'
-let g:ale_sign_column_always=1
+" let g:ale_sign_column_always=1
 highlight link ALEWarningSign String
 highlight link ALEErrorSign Title"
 
@@ -206,4 +209,8 @@ noremap <C-o> :CtrlP :pwd<CR>
 
 
 "Latex to unicode
-let g:latex_to_unicode_file_types = ".*"
+let g:latex_to_unicode_file_types = ".md"
+
+highlight GitGutterAdd    guifg=#009900 ctermfg=2
+highlight GitGutterChange guifg=#bbbb00 ctermfg=3
+highlight GitGutterDelete guifg=#ff2222 ctermfg=1
