@@ -64,9 +64,10 @@ let g:SimpylFold_doc_string_preview=1
 syntax enable
 set background=dark
 
-set nobackup
-set nowb
-set noswapfile
+set backup
+set backupdir=/tmp//,.
+set directory=/tmp//,.
+set undodir=/tmp//,.
 
 set wrap
 

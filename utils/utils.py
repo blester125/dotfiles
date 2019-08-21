@@ -10,7 +10,7 @@ def len_gen(gen):
 class Struct:
     def __init__(self, d):
         for k, v in d.items():
-            if isinstance(v, Sequence):
+            if isinstance(v, Sequence) and not isinstance(v, str):
                 setattr(self, k, [Struct(x) if isinstance(x, Mapping) else x for x in v])
             elif isinstance(v, Mapping):
                 setattr(self, k, Struct(v))
