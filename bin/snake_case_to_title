@@ -2,6 +2,7 @@
 
 import argparse
 
+
 def transform(name):
     prev_ = False
     result = []
@@ -11,18 +12,20 @@ def transform(name):
         elif prev_:
             prev_ = False
             result.append(char.upper())
-        elif char == "_":
+        elif char == "_" or char == "-":
             prev_ = True
             result.append(" ")
         else:
             result.append(char)
     return ''.join(result)
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("name")
     args = parser.parse_args()
     print(transform(args.name))
+
 
 if __name__ == "__main__":
     main()

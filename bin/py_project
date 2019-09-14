@@ -33,7 +33,7 @@ EOF
 
 echo "$license" > LICENSE.txt
 
-project_print=$(snake_case_to_title $project_name)
+project_print=$(to_title $project_name)
 readme=$(cat <<EOF
 # $project_print
 
@@ -73,6 +73,7 @@ setup=$(cat << EOF
 import re
 from setuptools import setup, find_packages
 
+
 def get_version(project_name):
     regex = re.compile(r"""^__version__ = ["'](\d+\.\d+\.\d+(?:a|b|rc)?(?:\d)*?)["']$""")
     with open(f"{project_name}/__init__.py") as f:
@@ -81,13 +82,19 @@ def get_version(project_name):
             if m is not None:
                 return m.groups(1)[0]
 
+
 def convert_images(text):
     image_regex = re.compile(r"!\[(.*?)\]\((.*?)\)")
     return image_regex.sub(r'<img src="\2" alt="\1">', text)
 
+
+def to_snake(title):
+    return title.replace('-', '_')
+
+
 class About(object):
     NAME='$project_name'
-    VERSION=get_version(NAME)
+    VERSION=get_version(to_snake(NAME))
     AUTHOR='$uname'
     EMAIL=f'{AUTHOR}@gmail.com'
     URL=f'https://github.com/{AUTHOR}/{NAME}'
@@ -95,8 +102,10 @@ class About(object):
     LICENSE='MIT'
     DESCRIPTION='$project_print'
 
+
 ext_modules = [
 ]
+
 
 setup(
     name=About.NAME,
@@ -112,7 +121,7 @@ setup(
     python_requires='>=3.6',
     packages=find_packages(),
     package_data={
-        '$project_name': [
+        to_snake(About.Name): [
         ],
     },
     include_package_data=True,
@@ -159,13 +168,15 @@ EOF
 
 echo "$travis" > .travis.yml
 
-mkdir $project_name
-cd $project_name
+project_dir=${project_name//-/_}
+
+mkdir $project_dir
+cd $project_dir
 
 __init__=$(cat << EOF
 __version__ = '0.0.0'
 
-print('This is a placeholder.')
+print('This is a placeholder for $project_dir.')
 EOF
 )
 
