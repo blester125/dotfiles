@@ -1,0 +1,36 @@
+#!/usr/bin/python3
+
+import argparse
+import textwrap
+
+
+def readme(title, name, uname):
+    return textwrap.dedent("""
+        # {title}
+
+        <!-- [![PyPi Version](https://img.shields.io/pypi/v/{name})](https://pypi.org/project/{name}/) -->
+
+        <!-- [![Actions Status](https://github.com/{uname}/{name}/workflows/Unit%20Test/badge.svg)](https://github.com/{uname}/{name}/actions) -->
+
+        [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+    """.format(title=title, name=name, uname=uname).lstrip("\n"))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--project_title", "--project-title", required=True, nargs="+")
+    parser.add_argument("--project_name", "--project-name", required=True, nargs="+")
+    parser.add_argument("--uname", required=True, nargs="+")
+    parser.add_argument("--output", default="README.md")
+    args = parser.parse_args()
+
+    title = " ".join(args.project_title)
+    name = " ".join(args.project_name)
+    uname = " ".join(args.uname)
+
+    with open(args.output, 'w') as f:
+        f.write(readme(title, name, uname))
+
+
+if __name__ == "__main__":
+    main()

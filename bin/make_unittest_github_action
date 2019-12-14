@@ -1,0 +1,52 @@
+#!/usr/bin/python3
+
+import os
+import textwrap
+
+
+def unittest():
+    return textwrap.dedent("""
+        name: Unit Test
+
+        on:
+          push:
+            branches:
+            - master
+          pull_request:
+            branches:
+            - master
+
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            strategy:
+              max-parallel: 4
+              matrix:
+                python-version: [3.6, 3.7, 3.8]
+
+            steps:
+            - uses: actions/checkout@v1
+            - name: Set Up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v1
+              with:
+                python-version: ${{ matrix.python-version }}
+            - name: Install dependencies and package
+              run: |
+                python -m pip install --upgrade pip
+                pip install .[test]
+            - name: Unit Test
+              run: |
+                pytest
+    """.lstrip("\n"))
+
+
+def main():
+    workflow_dir = os.path.join(".github", "workflows")
+    if not os.path.exists(workflow_dir):
+        os.makedirs(workflow_dir)
+    with open(os.path.join(workflow_dir, "unittest.yml"), "w") as f:
+        f.write(unittest())
+
+
+if __name__ == "__main__":
+    main()

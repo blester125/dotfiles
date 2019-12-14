@@ -1,0 +1,86 @@
+#!/usr/bin/python3
+
+import re
+import argparse
+
+def to_title(name):
+    start = True
+    result = []
+    for char in name:
+        if start:
+            result.append(char.upper())
+            start = False
+        else:
+            if char in {"_", "-"}:
+                start = True
+                result.append(" ")
+            else:
+                result.append(char)
+    return ''.join(result)
+
+
+def to_package(name):
+    name = re.sub(r"\s", "_", name)
+    name = name.replace("-", "_")
+    return name.lower()
+
+
+def test_to_title_with_dash():
+    name = "text-rank"
+    gold = "Text Rank"
+    res = to_title(name)
+    assert res == gold, "test_to_title_with_dash gold: {} got: {}".format(gold, res)
+
+
+def test_to_title_with_underscore():
+    name = "text_rank"
+    gold = "Text Rank"
+    res = to_title(name)
+    assert res == gold, "test_to_title_with_underscore gold: {} got: {}".format(gold, res)
+
+
+def test_to_package_with_dash():
+    name = "text-rank"
+    gold = "text_rank"
+    res = to_package(name)
+    assert res == gold, "test_to_package_with_dash gold: {} got: {}".format(gold, res)
+
+
+def test_to_package_with_underscore():
+    name = "text_rank"
+    gold = "text_rank"
+    res = to_package(name)
+    assert res == gold
+    assert res == gold, "test_to_package_with_underscore gold: {} got: {}".format(gold, res)
+
+
+def test_to_package_from_title():
+    title = "Text Rank"
+    gold = "text_rank"
+    res = to_package(title)
+    assert res == gold, "test_to_package_from_title gold: {} got: {}".format(gold, res)
+
+
+def test():
+    test_to_title_with_dash()
+    test_to_title_with_underscore()
+    test_to_package_with_dash()
+    test_to_package_with_underscore()
+    test_to_package_from_title()
+    print("Tests Passed!")
+
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("name")
+    parser.add_argument("--transform", choices={"package", "title"}, default="title")
+    args = parser.parse_args()
+    if args.transform == "package":
+        print(to_package(args.name))
+    else:
+        print(to_title(args.name))
+
+
+if __name__ == "__main__":
+    main()

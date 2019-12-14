@@ -182,7 +182,7 @@ bindsym $MOD+Control+l exec $HOME/.bin/i3lock_wrapper
 # Application Shortcuts
 bindsym $MOD+Control+1 exec nautilus
 bindsym $MOD+Control+2 exec firefox
-bindsym $MOD+Control+3 exec trove-beta
+bindsym $MOD+Control+3 exec google-chrome
 bindsym $MOD+Control+4 exec slack
 bindsym $MOD+Control+5 exec mendeleydesktop
 

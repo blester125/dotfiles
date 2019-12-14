@@ -1,0 +1,25 @@
+#!/usr/bin/python3
+
+import argparse
+import textwrap
+
+
+def init(package):
+    return textwrap.dedent("""
+        __version__ = "0.0.0"
+
+        print("This is a placeholder for {package}")
+    """.format(package=package).lstrip("\n"))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("project_package")
+    args = parser.parse_args()
+
+    with open("__init__.py", "w") as f:
+        f.write(init(args.project_package))
+
+
+if __name__ == "__main__":
+    main()

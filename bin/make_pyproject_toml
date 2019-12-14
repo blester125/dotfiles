@@ -1,0 +1,36 @@
+#!/usr/bin/python3
+
+import argparse
+import textwrap
+
+
+def pyproject_toml(builds):
+    return textwrap.dedent("""
+        [build-system]
+        requires = {builds}
+    """.format(builds=builds).lstrip("\n"))
+
+
+def pyproject_toml_black(line_length, target_version):
+    return textwrap.dedent("""
+        [tool.black]
+        line-length = {line_length}
+        target_version = {target_version}
+    """.format(line_length=line_length, target_version=target_version).lstrip("\n"))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--builds", nargs="+", default=["setuptools", "wheel"])
+    parser.add_argument("--line-length", "--line_length", type=int, default=120)
+    parser.add_argument("--targets", nargs="+", default=["py36"])
+    args = parser.parse_args()
+
+    with open("pyproject.toml", "w") as f:
+        data = pyproject_toml(args.builds)
+        data = data + "\n" + pyproject_toml_black(args.line_length, args.targets)
+        f.write(data)
+
+
+if __name__ == "__main__":
+    main()
