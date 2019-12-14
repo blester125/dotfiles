@@ -1,0 +1,23 @@
+#!/usr/bin/python3
+
+import textwrap
+
+
+def pre_commit():
+    return textwrap.dedent("""
+        repos:
+        - repo: https://github.com/psf/black
+          rev: stable
+          hooks:
+          - id: black
+            language_version: python3.6
+    """.lstrip("\n"))
+
+
+def main():
+    with open(".pre-commit-config.yaml", "w") as f:
+        f.write(pre_commit())
+
+
+if __name__ == "__main__":
+    main()

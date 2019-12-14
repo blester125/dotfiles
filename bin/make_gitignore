@@ -1,0 +1,31 @@
+#!/usr/bin/python3
+
+import textwrap
+
+
+def gitignore():
+    return textwrap.dedent("""
+        .python-version
+        dist/*
+        build/*
+        *.egg*
+        *.pyc
+        *.so
+        __pycache__/
+        */.ipynb_checkpoints/
+        .pytest_cache/
+        *.html
+        *.p
+        *.npy
+        */data/*
+        .mypy_cache/
+    """.lstrip("\n"))
+
+
+def main():
+    with open(".gitignore", "w") as f:
+        f.write(gitignore())
+
+
+if __name__ == "__main__":
+    main()
