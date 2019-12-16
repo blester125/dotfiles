@@ -22,7 +22,7 @@ make_gitignore
 make_pyproject_toml --line-length 120 --target py36
 make_setup --project-name $project_name --project-title $project_title --project-package $project_package --uname $uname
 make_unittest_github_action
-amke_publish_pypi_github_action
+make_publish_pypi_github_action
 make_pre_commit
 touch MANIFEST.in
 mkdir tests
