@@ -1,0 +1,46 @@
+#!/usr/bin/python3
+
+import os
+import textwrap
+
+
+def publish_pypi():
+    return textwrap.dedent("""
+        name: Publish to PyPI
+
+        on:
+            push:
+                tags:
+                - '*'
+
+        jobs:
+            build:
+                runs-on: ubuntu-latest
+                steps:
+                - uses: actions/checkout@v1
+                - name: Setup Python
+                  uses: actions/setup-python@v1
+                  with:
+                      python-version: 3.6
+                - name: Build Package
+                  run: |
+                      python setup.py sdist
+                - name: Publish Package
+                  if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
+                  uses: pypa/gh-action-pypi-publish@master
+                  with:
+                      user: __token__
+                      password: ${{ secrets.pypi_password }}
+    """.lstrip("\n"))
+
+
+def main():
+    workflow_dir = os.path.join(".github", "workflows")
+    if not os.path.exists(workflow_dir):
+        os.makedirs(workflow_dir)
+    with open(os.path.join(workflow_dir, "publish.yml"), "w") as f:
+        f.write(publish_pypi())
+
+
+if __name__ == "__main__":
+    main()
