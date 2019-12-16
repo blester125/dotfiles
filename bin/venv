@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=${2:-3.6.3}
+VERSION=${2:-3.6.9}
 
 pyenv virtualenv ${VERSION} $1
 pyenv virtualenvs | grep $1 | tail -n1 | awk '{$1=$1};1' > .python-version
