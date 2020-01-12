@@ -22,6 +22,7 @@ Plug 'kien/ctrlp.vim'
 Plug 'aserebryakov/vim-todo-lists'
 Plug 'leafgarland/typescript-vim'
 Plug 'JuliaEditorSupport/julia-vim'
+Plug 'jceb/vim-orgmode'
 
 call plug#end()
 
