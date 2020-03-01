@@ -1,0 +1,29 @@
+#!/usr/bin/python3
+
+import textwrap
+import argparse
+
+
+def readme(title, uname, repo):
+    return textwrap.dedent(r"""
+        # {title}
+
+        [![Actions Status](https://github.com/{uname}/{repo}/workflows/Slides/badge.svg)](https://github.com/{uname}/{repo}/actions)
+
+        Slides for my talk called "{title}"
+    """.lstrip("\n")).format(title=title, uname=uname, repo=repo)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--title", required=True)
+    parser.add_argument("--uname", required=True)
+    parser.add_argument("--repo", required=True)
+    args = parser.parse_args()
+
+    with open("README.md", "w") as wf:
+        wf.write(readme(args.title, args.uname, args.repo))
+
+
+if __name__ == "__main__":
+    main()

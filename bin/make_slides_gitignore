@@ -1,0 +1,34 @@
+#!/usr/bin/python3
+
+import textwrap
+import argparse
+
+
+def gitignore(title):
+    return textwrap.dedent(r"""
+        **/_minted-slides/*
+        *.nav
+        *.pdf
+        *.snm
+        *.toc
+        **/__pycache__/*
+        *.pyc
+        *.aux
+        *.log
+        *.out
+        *.vrb*
+        !{}.pdf
+    """.lstrip("\n")).format(title.replace(" ", "-"))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--title", required=True)
+    args = parser.parse_args()
+
+    with open(".gitignore", "w") as wf:
+        wf.write(gitignore(args.title))
+
+
+if __name__ == "__main__":
+    main()

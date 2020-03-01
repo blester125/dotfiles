@@ -1,0 +1,52 @@
+#!/usr/bin/python3
+
+import re
+import os
+import argparse
+from subprocess import run
+from datetime import datetime
+
+
+def main():
+    d = datetime.today()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--title", required=True)
+    parser.add_argument("--location", required=True)
+    parser.add_argument("--author", default="Brian Lester")
+    parser.add_argument("--uname", default="blester125")
+    parser.add_argument("--affiliation", default="")
+    parser.add_argument("--day", "-d", default=str(d.day))
+    parser.add_argument("--month", "-m", default=d.strftime("%B"))
+    parser.add_argument("--year", "-y", default=str(d.year))
+    args = parser.parse_args()
+
+    repo = "{}-Talk-{}-{}-{}".format(args.location.replace(" ", "-"), args.month, args.day, args.year)
+
+    if not os.path.exists(repo):
+        os.makedirs(repo)
+
+    latex_command = ["make_slides_latex", "--title", args.title, "--author", args.author, "--affiliation", args.affiliation, "--month", args.month, "--day", args.day, "--year", args.year]
+    print(" ".join(latex_command))
+    run(latex_command, check=True, cwd=repo)
+
+    title = re.sub(r"[^a-zA-Z0-9 ]", "", args.title)
+
+    action_command = ["make_slides_github_action", "--title", title]
+    print(" ".join(action_command))
+    run(action_command, check=True, cwd=repo)
+
+    ignore_command = ["make_slides_gitignore", "--title", title]
+    print(" ".join(ignore_command))
+    run(ignore_command, check=True, cwd=repo)
+
+    make_command = ["make_slides_makefile", "--title", title]
+    print(" ".join(make_command))
+    run(make_command, check=True, cwd=repo)
+
+    readme_command = ["make_slides_readme", "--title", title, "--uname", args.uname, "--repo", repo]
+    print(" ".join(readme_command))
+    run(readme_command, check=True, cwd=repo)
+
+
+if __name__ == "__main__":
+    main()

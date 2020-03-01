@@ -1,0 +1,74 @@
+#!/usr/bin/python3
+
+import os
+import argparse
+import textwrap
+
+
+def slides_action(title):
+    title = title.replace(" ", "-")
+    return textwrap.dedent(r"""
+        name: Slides
+
+        on: [push]
+
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            container: blester125/beamer-image:latest
+            steps:
+            - uses: actions/checkout@v2
+            - name: Build Slides
+              run: |
+                make clean
+                make
+            - uses: actions/upload-artifact@v1
+              if: success()
+              with:
+                  name: artifacts
+                  path: %s.pdf
+          commit:
+            needs: build
+            runs-on: ubuntu-latest
+            steps:
+            - uses: actions/checkout@v2
+            - name: Delete slides
+              run: |
+                  rm -rf %s.pdf
+            - uses: actions/download-artifact@v1
+              with:
+                  name: artifacts
+                  path: tmp
+            - name: Move artifacts
+              run: |
+                  mv tmp/* .
+                  rm -rf tmp
+            - name: Commit Files
+              shell: bash
+              run: |
+                  git add -A
+                  git diff-index --quiet HEAD \
+                  || git -c user.name="GitHub" -c user.email="noreply@github.com" commit \
+                    --author="github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>" \
+                    -m "Built Slides"
+            - name: Push changes
+              uses: ad-m/github-push-action@master
+              with:
+                github_token: ${{ secrets.GITHUB_TOKEN }}
+    """.lstrip("\n")) % (title, title)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--title", required=True)
+    args = parser.parse_args()
+
+    workflow_dir = os.path.join(".github", "workflows")
+    if not os.path.exists(workflow_dir):
+        os.makedirs(workflow_dir)
+    with open(os.path.join(workflow_dir, "slides.yml"), "w") as wf:
+        wf.write(slides_action(args.title))
+
+
+if __name__ == "__main__":
+    main()

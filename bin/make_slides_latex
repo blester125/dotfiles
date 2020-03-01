@@ -1,0 +1,70 @@
+#!/usr/bin/python3
+
+import os
+import argparse
+import textwrap
+from datetime import datetime
+
+
+def slides(title, author, affiliation, month, day, year):
+    return textwrap.dedent(r"""
+    \documentclass{beamer}
+
+    \usefonttheme[onlymath]{serif}
+    \usepackage[utf8]{inputenc}
+    \usepackage{amsmath}
+    \usepackage{array}
+    \usepackage{graphicx}
+    \usepackage{mathtools}
+    \usepackage{minted}
+    \usepackage{hyperref}
+    \hypersetup{
+        colorlinks=true,
+        linkcolor=blue,
+    }
+    \usemintedstyle{manni}
+    \newminted{python}{fontsize=\footnotesize}
+
+    \usetheme{Pittsburgh}
+
+    \usepackage{pgfpages}
+    \setbeamertemplate{note page}{\pagecolor{yellow!5}\insertnote}
+    \setbeameroption{show notes on second screen=right}
+
+    \title{%s}
+    \author{%s}
+    \institute{%s}
+    \date{%s, %s, %s}
+
+    \def\R{\mathbb{R}}
+
+    \begin{document}
+
+    \frame{\titlepage}
+
+    \end{document}
+    """.lstrip("\n")) % (title, author, affiliation, month, day, year)
+
+
+def main():
+    d = datetime.today()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--base-dir", "--base_dir", default="slides")
+    parser.add_argument("--slide-file", "--slide_file", default="slides.tex")
+    parser.add_argument("--title", required=True)
+    parser.add_argument("--author", default="Brian Lester")
+    parser.add_argument("--affiliation", default="")
+    parser.add_argument("--month", default=d.strftime("%B"))
+    parser.add_argument("--day", default=str(d.day))
+    parser.add_argument("--year", default=str(d.year))
+
+    args = parser.parse_args()
+
+    if not os.path.exists(args.base_dir):
+        os.makedirs(args.base_dir)
+    with open(os.path.join(args.base_dir, args.slide_file), "w") as f:
+        f.write(slides(args.title, args.author, args.affiliation, args.month, args.day, args.year))
+
+
+if __name__ == "__main__":
+    main()
