@@ -15,6 +15,10 @@ def makefile(title):
 			cd $(SLIDES_DIR)
 			$(LATEX) --shell-escape slides.tex
 			$(LATEX) --shell-escape slides.tex
+
+		.ONESHELL:
+		release: slides
+			cd $(SLIDES_DIR)
 			cp slides.pdf ../%s.pdf
 
 		clean:

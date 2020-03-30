@@ -21,7 +21,7 @@ def slides_action(title):
             - name: Build Slides
               run: |
                 make clean
-                make
+                make release
             - uses: actions/upload-artifact@v1
               if: success()
               with:
