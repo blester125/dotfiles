@@ -24,7 +24,7 @@ def setup(name, title, package, uname):
         class About(object):
             NAME="{name}"
             VERSION=get_version("{package}/__init__.py")
-            AUTHOR="{name}"
+            AUTHOR="{uname}"
             EMAIL=f"{{AUTHOR}}@gmail.com"
             URL=f"https://github.com/{{AUTHOR}}/{{NAME}}"
             DL_URL=f"{{URL}}/archive/{{VERSION}}.tar.gz"

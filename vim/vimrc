@@ -223,3 +223,8 @@ highlight GitGutterDelete guifg=#ff2222 ctermfg=1
 " autocmd BufWritePre *.py execute ':Black'
 
 au BufRead,BufNewFile *.tex setlocal textwidth=120
+au BufRead,BufNewFile *.md setlocal textwidth=120
+
+" Tex plugins
+let g:vimtex_fold_enabled = 1
+lef g:tex_flavor = 'latex'
