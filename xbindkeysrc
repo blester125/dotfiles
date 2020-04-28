@@ -1,0 +1,15 @@
+#Pagedown press
+"xte 'keydown Next'"
+b:8
+
+#Pagedown release
+"xte 'keyup Next'"
+b:8 + Release
+
+#Pagedup press
+"xte 'keydown Prior'"
+b:9
+
+#Pageup release
+"xte 'keyup Prior'"
+b:9 + Release

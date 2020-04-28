@@ -22,7 +22,9 @@ Plug 'kien/ctrlp.vim'
 Plug 'aserebryakov/vim-todo-lists'
 Plug 'leafgarland/typescript-vim'
 Plug 'JuliaEditorSupport/julia-vim'
+Plug 'ekalinin/Dockerfile.vim'
 Plug 'jceb/vim-orgmode'
+Plug 'lervag/vimtex'
 
 call plug#end()
 
@@ -58,7 +60,7 @@ set hlsearch
 
 "enable folding
 "set foldcolumn=1
-set foldmethod=indent
+" set foldmethod=indent
 set foldlevel=99
 let g:SimpylFold_doc_string_preview=1
 

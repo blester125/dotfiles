@@ -12,6 +12,7 @@ ln -snf $HOME/.shellrc/screenrc $HOME/.screenrc
 ln -snf $HOME/.shellrc/gitconfig $HOME/.gitconfig
 ln -snf $HOME/.bin/search.py $HOME/.bin/search
 ln -snf $HOME/.bin/search.py $HOME/.bin/sr
+ln -snf $HOME/.shellrc/xbindkeysrc $HOME/.xbindkeysrc
 
 if [ ! -L $HOME/.bashrc ]; then
     cp $HOME/.bashrc bashrc
