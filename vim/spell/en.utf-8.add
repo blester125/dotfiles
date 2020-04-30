@@ -331,3 +331,5 @@ postgres
 localhost
 recurse
 dirichlet
+en
+csv
