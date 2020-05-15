@@ -25,6 +25,7 @@ Plug 'JuliaEditorSupport/julia-vim'
 Plug 'ekalinin/Dockerfile.vim'
 Plug 'jceb/vim-orgmode'
 Plug 'lervag/vimtex'
+Plug 'mattn/calendar-vim'
 
 call plug#end()
 
