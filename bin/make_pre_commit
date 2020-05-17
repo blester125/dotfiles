@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import textwrap
+import argparse
 
 
 def pre_commit():
@@ -13,10 +14,26 @@ def pre_commit():
             language_version: python3.6
     """.lstrip("\n"))
 
+def pre_commit_prettier(precommit):
+    prettier = textwrap.dedent("""
+        - repo: https://github.com/prettier/prettier
+          rev: ""
+          hooks:
+          - id: prettier
+    """)
+    return "".join((precommit, prettier))
+
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--prettier", action="store_true")
+    args = parser.parse_args()
+
     with open(".pre-commit-config.yaml", "w") as f:
-        f.write(pre_commit())
+        pre = pre_commit()
+        if args.prettier:
+            pre = pre_commit_prettier(pre)
+        f.write(pre)
 
 
 if __name__ == "__main__":

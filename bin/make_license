@@ -2,11 +2,15 @@
 
 import argparse
 import textwrap
+from typing import Optional
+from datetime import datetime
 
 
-def mit(name):
+def mit(name, year: Optional[datetime] = None):
+    year = datetime.now() if year is None else year
+    year = year.strftime("%Y")
     return textwrap.dedent("""
-        Copyright 2018 {name}
+        Copyright {year} {name}
 
         Permission is hereby granted, free of charge, to any person obtaining a copy
         of this software and associated documentation files (the "Software"), to deal
@@ -25,14 +29,19 @@ def mit(name):
         LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
         OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
         THE SOFTWARE.
-    """.format(name=name).lstrip("\n"))
+    """.format(name=name, year=year).lstrip("\n"))
+
+
+def parse_year(ts):
+    return datetime.strptime(ts, "%Y")
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Create the license file for a project")
     parser.add_argument("name", nargs="+")
     parser.add_argument("--type", choices={"MIT"}, default="MIT")
     parser.add_argument("--output", default="LICENSE.txt")
+    parser.add_argument("--year", type=parse_year)
     args = parser.parse_args()
 
     name = " ".join(args.name)
@@ -43,7 +52,7 @@ def main():
         license = mit
 
     with open(args.output, "w") as f:
-        f.write(license(name))
+        f.write(license(name, args.year))
 
 
 if __name__ == "__main__":

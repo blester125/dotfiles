@@ -18,13 +18,14 @@ git init > /dev/null 2>&1
 
 make_license $name --type MIT --output LICENSE.txt
 make_readme --project_title $project_title --project_name $project_name --uname $uname
-make_gitignore
+make_py_gitignore
 make_pyproject_toml --line-length 120 --target py36
 make_setup --project-name $project_name --project-title $project_title --project-package $project_package --uname $uname
 make_unittest_github_action
 make_publish_pypi_github_action
 make_pre_commit
 touch MANIFEST.in
+touch todo.org
 mkdir tests
 
 # Where the python package goes
@@ -38,6 +39,6 @@ cd ..
 venv $project_name >/dev/null 2>&1
 pip install --upgrade pip >/dev/null 2>&1
 pip install --upgrade 'setuptools>=39.1.0' >/dev/null 2>&1
-pip install twine pre-commit > /dev/null 2>&1
+pip install twine pre-commit wheel > /dev/null 2>&1
 
 pre-commit install > /dev/null 2>&1

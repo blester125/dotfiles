@@ -8,11 +8,7 @@ def readme(title, name, uname):
     return textwrap.dedent("""
         # {title}
 
-        <!-- [![PyPi Version](https://img.shields.io/pypi/v/{name})](https://pypi.org/project/{name}/) -->
-
-        <!-- [![Actions Status](https://github.com/{uname}/{name}/workflows/Unit%20Test/badge.svg)](https://github.com/{uname}/{name}/actions) -->
-
-        [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+        <!-- [![PyPi Version](https://img.shields.io/pypi/v/{name})](https://pypi.org/project/{name}/) --> <!-- [![Actions Status](https://github.com/{uname}/{name}/workflows/Unit%20Test/badge.svg)](https://github.com/{uname}/{name}/actions) --> [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
     """.format(title=title, name=name, uname=uname).lstrip("\n"))
 
 
