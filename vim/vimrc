@@ -214,7 +214,7 @@ noremap <C-o> :CtrlP :pwd<CR>
 
 
 "Latex to unicode
-let g:latex_to_unicode_file_types = ["markdown"]
+let g:latex_to_unicode_file_types = ["markdown", "org"]
 
 highlight GitGutterAdd    guifg=#009900 ctermfg=2
 highlight GitGutterChange guifg=#bbbb00 ctermfg=3
