@@ -1,6 +1,18 @@
 #!/usr/bin/python3
 
+
+import argparse
+from urllib.request import urlopen
+from urllib.error import HTTPError
 import textwrap
+
+
+def remote_gitignore(url):
+    try:
+        with urlopen(url) as f:
+            return f.read().decode('utf-8')
+    except HTTPError:
+        return gitignore()
 
 
 def gitignore():
@@ -23,8 +35,17 @@ def gitignore():
 
 
 def main():
-    with open(".gitignore", "w") as f:
-        f.write(gitignore())
+    parser = argparse.ArgumentParser(description="Create a default gitignore file")
+    parser.add_argument("--output", default=".gitignore")
+    parser.add_argument("--remote", default="https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore")
+    parser.add_argument("--local", action="store_true")
+    args = parser.parse_args()
+
+    with open(args.output, "w") as f:
+        if args.local:
+            f.write(gitignore())
+        else:
+            f.write(remote_gitignore(args.remote))
 
 
 if __name__ == "__main__":
