@@ -1,11 +1,17 @@
 #!/home/brian/.pyenv/versions/wacom/bin/python
 
 import time
+import argparse
 import subprocess
 import pyudev
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Listen to udev for the wacom tablet.")
+    parser.add_argument('--vendor_id', '--vendor-id', default=b"056a", type=lambda x: x.encode("utf-8"))
+    parser.add_argument('--product_id', '--product-id', default=b"0374", type=lambda x: x.encode("utf-8"))
+    args = parser.parse_args()
+
     print("Initializing udev listener")
     context = pyudev.Context()
     print("initializing udev monitor")
@@ -20,7 +26,7 @@ def main():
         print(f"device vendor id: {vendor_id}")
         product_id = device.attributes.get('idProduct')
         print(f"device product id: {product_id}")
-        if vendor_id == b'056a' and product_id == b'0374':
+        if vendor_id == args.vendor_id and product_id == args.product_id:
             print("Device is my wacom")
             time.sleep(2)
             print("Running wacom setup")
