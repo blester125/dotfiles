@@ -10,6 +10,7 @@ Restart=on-failure
 RestartSec=10
 StartLimitBurst=10
 Type=simple
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
