@@ -13,6 +13,7 @@ ln -snf $HOME/.shellrc/screenrc $HOME/.screenrc
 ln -snf $HOME/.shellrc/gitconfig $HOME/.gitconfig
 ln -snf $HOME/.bin/search.py $HOME/.bin/search
 ln -snf $HOME/.bin/search.py $HOME/.bin/sr
+ln -snf $HOME/.shellrc/inputrc $HOME/.inputrc
 ln -snf $HOME/.shellrc/xbindkeysrc $HOME/.xbindkeysrc
 ln -snf $HOME/.shellrc/wacom/xsetwacom.sh $HOME/.xsetwacom.sh
 cp $HOME/.shellrc/wacom/wacom.service $HOME/.config/systemd/user/wacom.service
