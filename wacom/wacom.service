@@ -1,8 +1,5 @@
 [Unit]
 Description=Wacom Plugin Service
-After=network.target
-After=systemd-user-sessions.service
-After=network-online.target
 
 [Service]
 ExecStart=/home/brian/.shellrc/wacom/wacom-listener.py
@@ -13,4 +10,4 @@ Type=simple
 Environment=PYTHONUNBUFFERED=1
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

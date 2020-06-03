@@ -20,6 +20,10 @@ def main():
     print("starting udev monitor")
     monitor.start()
 
+    print("Running wacom setup")
+    subprocess.call("/home/brian/.shellrc/wacom/xsetwacom.sh")
+    print("Setup wacom")
+
     for device in iter(monitor.poll, None):
         print(f"action on device {device}")
         vendor_id = device.attributes.get('idVendor')
