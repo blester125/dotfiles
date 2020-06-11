@@ -227,6 +227,7 @@ highlight GitGutterDelete guifg=#ff2222 ctermfg=1
 
 au BufRead,BufNewFile *.tex setlocal textwidth=120
 au BufRead,BufNewFile *.md setlocal textwidth=120
+au BufRead,BufNewFile *.org setlocal textwidth=120
 
 " Tex plugins
 let g:vimtex_fold_enabled = 1
