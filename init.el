@@ -1,5 +1,20 @@
 ;; .emacs.d/init.el
 
+;; Basic Customization
+(setq default-directory "~/")
+(setq inhibit-startup-message 't) ;; Hide the splash screen
+(setq initial-scratch-message ";; Emacs Scratch\n\n")
+(setq focus-follows-mouse 'f)
+(setq mouse-autoselect-window 'f)
+
+(setq-default tab-width 4)
+(setq python-indent-offset 4)
+
+(add-hook 'text-mode-hook 'flyspell-mode) ;; Setup spell check minor mode in any text mode subclass
+(add-hook 'prog-mode-hook 'flyspell-prog-mode)  ;; Setup spell check for comments in any programming model subclass
+(add-hook 'text-mode-hook 'auto-fill-mode) ;; Setup any text mode to do a hard wrap
+(setq-default fill-column 120) ;; Set this hard wrap to be at 120 lines
+
 ;; Enables baisc packaging support
 (require 'package)
 
@@ -28,28 +43,63 @@
   :ensure t
   :config (evil-mode 1))
 
-(use-package evil-nerd-commenter
-  :ensure t)
-
-;; blacken python code
-(use-package blacken
+;; Like vim-commentary, allows for gcc to comment a line
+(use-package evil-commentary
   :ensure t
   :config
-  (setq blacken-allow-py36 't)
-  (setq blacken-line-length 120))
+  (evil-commentary-mode))
 
-;; Git integration
-(use-package magit
+;; This gives relative line numbers when in evil command mode (with the current line
+;; being the global number. In insert mode the line numbers are global
+(use-package nlinum-relative
   :ensure t
-  :bind ("C-x g" . magit-status))
+  :config
+  (nlinum-relative-setup-evil)
+  (add-hook 'prog-mode-hook 'nlinum-relative-mode)
+  (add-hook 'text-mode-hook 'nlinum-relative-mode))
+
+;; Helm is a fuzzy matcher
+(use-package helm
+  :ensure t
+  :bind
+  ("C-x C-f" . helm-find-files) ;; Bind the file finding functionality to the open version
+  :config
+  (helm-mode 1)
+  (setq
+   helm-split-window-in-side-p t ;; Open helm butter inside current window
+   helm-move-to-line-cycle-in-source t ;; Loop through the list
+   helm-ff-file-name-history-use-recetnf t
+   helm-echo-input-in-header-line t)
+  ;; (push '("Find file other window `C-c o'" . helm-find-files-other-window) helm-find-files-actions)
+  ;; (delete-dups helm-find-files-actions)
+)
+
+
+;; ;; blacken python code
+;; (use-package blacken
+;;   :ensure t
+;;   :config
+;;   (setq blacken-allow-py36 't)
+;;   (setq blacken-line-length 120))
+
+;; (use-package conda
+;;  :ensure t
+;;  :config
+;;  (conda-env-initialize-interactive-shells)
+;;  (conda-env-initialize-eshell)
+;;  (conda-env-autoactivate-mode t))
+
+
+;; ;; Git integration
+;; (use-package magit
+;;   :ensure t
+;;   :bind ("C-x g" . magit-status))
 
 ;; Look like ubuntu terminals
 (use-package ubuntu-theme
   :ensure t
   :config (load-theme 'ubuntu t))
 
-(use-package flyspell
-  :ensure t)
 
 ;; Set up Markdown coloring
 (use-package markdown-mode
@@ -74,9 +124,83 @@
   :ensure t)
 
 ;; Org Mode for TODOs
-(use-package org)
+(use-package org
+  :ensure t)
+
 ;; A Zettelkasten implementation and the while reason I am trying out Emacs
-(use-package org-roam)
+(use-package org-roam
+  :ensure t
+  :hook
+  (after-init . org-roam-mode)
+  :custom
+  (org-roam-directory (concat (getenv "HOME") "/notes/zettelkasten"))
+  :bind
+  (:map org-roam-mode-map
+        (("C-c n l" . org-roam)
+         ("C-c n f" . org-roam-find-file)
+         ("C-c n g" . org-roamshow-graph))
+        :map org-mode-map
+        (("C-c n i" . org-roam-insert)))
+  )
+
+(use-package helm-bibtex
+  :ensure t
+  :bind
+  ("C-x C-b" . helm-bibtex)
+  :config
+  (setq
+   bibtex-completion-notes-path (concat (getenv "HOME") "/notes/research/")
+   bibtex-completion-bibliography (concat (getenv "HOME") "/notes/research/references.bib")
+   bibtex-completion-pdf-field "file"
+   bibtex-completion-notes-template-multiple-files
+   (concat
+    "#+title: ${title}\n"
+    "#+roam_key: cite:${=key=}\n\n"
+    "* TODO Notes\n\n"
+    ":PROPERTIES:\n"
+    ":Custom_ID: ${=key=}\n"
+    ":NOTER_DOCUMENT: %(orb-process-file-field \"${=key=}\")\n"
+    ":AUTHOR: ${author-abbrev}\n"
+    ":JOURNAL: ${journaltitle}\n"
+    ":DATE: ${date}\n"
+    ":YEAR: ${year}\n"
+    ":DOT: ${doi}\n"
+    ":URL: ${url}\n"
+    ":END:\n\n"
+   )
+  )
+  (helm-delete-action-from-source "Edit notes" helm-source-bibtex)
+  (helm-add-action-to-source "Edit notes" 'helm-bibtex-edit-notes helm-source-bibtex 0)
+)
+
+(use-package org-ref
+  :ensure t
+  :config
+  (setq
+    org-ref-bibliography-notes (concat (getenv "HOME") "/notes/research/")
+    org-ref-default-bibliograhy (concat (getenv "HOME") "/notes/research/references.bib")
+    )
+  )
+
+
+; (use-package org-roam-bibtex
+;   :after (org-roam)
+;   :hook (org-roam-mode . org-roam-bibtex-mode)
+;   :config
+;   (setq org-roam-bibtex-preformat-keywords
+;   '("=key=" "title" "url" "file" "author-or-editor" "keywords"))
+;   (setq orb-templates
+;     '(("r" "ref" plain (function org-roam-capture--get-point)
+;        ""
+;        :file-name "${slug}"
+;        :head "#+TITLE: ${=key=}: ${title}\n#+ROAM_KEY: ${ref}
+
+;  - tags ::
+;  - keywords :: ${keywords}
+
+;  \n* ${title}\n  :PROPERTIES:\n  :Custom_ID: ${=key=}\n  :URL: ${url}\n  :AUTHOR: ${author-or-editor}\n  :NOTER_DOCUMENT: %(orb-process-file-field \"${=key=}\")\n  :NOTER_PAGE: \n  :END:\n\n"
+
+;         :unnarrowed t))))
 
 ;; my_packages contains a list of package names
 ;;(defvar my_packages
@@ -90,19 +214,7 @@
 ;;    )
 ;;  )
 
-;; Basic Customization
-(setq inhibit-startup-message t) ;; Hide the splash screen
-(global-linum-mode t) ;; Enable line numbers
-(setq-default tab-width 4)
-(setq python-indent-offset 4)
 
-(add-hook 'text-mode-hook 'flyspell-mode)
-(add-hook 'proj-mode-hook 'flyspell-prog-mode)
-(add-hook 'text-mode-hook 'auto-fill-mode)
-(setq-default fill-column 120)
-
-(setq display-line-numbers 'relative
-      display-line-numbers-current-absolute t)
 
 ;; Development Setup
 ;; Enable elpy
@@ -119,7 +231,9 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages (quote (json-mode magit material-theme better-defaults))))
+ '(package-selected-packages
+   (quote
+    (helm-bibtex helm json-mode magit material-theme better-defaults))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
