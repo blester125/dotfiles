@@ -1,7 +1,8 @@
 ;; .emacs.d/init.el
 
 ;; Basic Customization
-(setq default-directory "~/")
+(setq x-super-keysym 'meta) ;; Set the left super key to be the meta key, otherwise I have to use alt which doesn't play nice with i3
+(setq default-directory (concat (getenv "HOME") "/"))
 (setq inhibit-startup-message 't) ;; Hide the splash screen
 (setq initial-scratch-message ";; Emacs Scratch\n\n")
 (setq focus-follows-mouse 'f)
@@ -41,7 +42,18 @@
 ;; Setup Vim controls
 (use-package evil
   :ensure t
+  :init
+  (setq evil-want-integration t)
+  (setq evil-want-keybinding nil)
   :config (evil-mode 1))
+
+;; (use-package evil-collection
+;;   :after evil
+;;   :ensure t
+;;   :custom (evil-collection-setup-minibuffer t)
+;;   :init
+;;   (evil-collection-init)
+;; )
 
 ;; Like vim-commentary, allows for gcc to comment a line
 (use-package evil-commentary
@@ -125,7 +137,18 @@
 
 ;; Org Mode for TODOs
 (use-package org
-  :ensure t)
+  :ensure t
+  :config
+  (setq org-hide-leading-stars t)
+  (setq org-startup-folded nil)
+  ;; (setq org-ellipsis "⤵")
+)
+
+(use-package org-superstar
+  :ensure t
+  :hook
+  (org-mode . org-superstar-mode)
+)
 
 ;; A Zettelkasten implementation and the while reason I am trying out Emacs
 (use-package org-roam
