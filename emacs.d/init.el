@@ -7,6 +7,7 @@
 (setq initial-scratch-message ";; Emacs Scratch\n\n")
 (setq focus-follows-mouse 'f)
 (setq mouse-autoselect-window 'f)
+(add-hook 'before-save-hook 'whitespace-cleanup)
 
 (setq-default tab-width 4)
 (setq python-indent-offset 4)
