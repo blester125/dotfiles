@@ -136,6 +136,9 @@
 (use-package json-mode
   :ensure t)
 
+(use-package csv-mode
+  :ensure t)
+
 ;; Org Mode for TODOs
 (use-package org
   :ensure t
