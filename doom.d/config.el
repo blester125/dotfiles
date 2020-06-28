@@ -9,8 +9,7 @@
 (setq user-full-name "Brian Lester"
       user-mail-address "blester125@gmail.com")
 
-; (add-hook 'text-mode-hook 'flyspell-mode)
-;; (add-hook 'prog-mode-hook 'flyspell-prog-mode)
+
 
 (add-hook 'text-mode-hook 'auto-fill-mode)
 (setq-default fill-column 120)
@@ -31,7 +30,7 @@
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
-(setq doom-theme 'doom-vibrant)
+(setq doom-theme 'doom-Iosvkem)
 (setq doom-font (font-spec :family "Input Mono" :size 14))
 
 ;; If you use `org' and don't want your org files in the default location below,
@@ -72,6 +71,10 @@
 ;; Configuring spell checking which I def need lol
 (add-hook! 'text-mode-hook 'flyspell-mode)
 (add-hook! 'prog-mode-hook 'flyspell-prog-mode)
+;; This is turns on super mode where things like `_' are treaded as part of a word but that is isn't working with evil mode atm
+;; (add-hook! 'python-mode-hook 'superword-mode)
+;; Update the value of `_' in the syntax table so evil mode commands like `w' will not stop on this symbol, lets you manipulate a whole variable
+(add-hook! 'python-mode-hook #'(lambda () (modify-syntax-entry ?_ "w")))
 (map! :n "z g" 'bl/save-word)
 
 
@@ -90,3 +93,6 @@
 (after! counsel
   (setq counsel-find-file-ignore-regexp "\\(?:^[#.]\\)\\|\\(?:[#~]$\\)\\|\\(?:^Icon?\\)\\|\\(?:__pycache__\\)")
   )
+
+(after! org
+  (setq org-log-done 'time))

@@ -15,7 +15,7 @@ ln -snf $HOME/.bin/search.py $HOME/.bin/search
 ln -snf $HOME/.bin/search.py $HOME/.bin/sr
 ln -snf $HOME/.shellrc/inputrc $HOME/.inputrc
 ln -snf $HOME/.shellrc/xbindkeysrc $HOME/.xbindkeysrc
-ln -snf $HOME/.shellrc/xmodmap $HOME/.xmodmap
+ln -snf $HOME/.shellrc/Xmodmap $HOME/.Xmodmap
 ln -snf $HOME/.shellrc/wacom/xsetwacom.sh $HOME/.xsetwacom.sh
 # ln -snf $HOME/.shellrc/emacs.d $HOME/.emacs.d
 ln -snf $HOME/.shellrc/doom.d $HOME/.doom.d
