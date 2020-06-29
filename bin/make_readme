@@ -4,15 +4,44 @@ import argparse
 import textwrap
 
 
-def readme(title, name, uname):
+def readme_md(title, name, uname):
     return textwrap.dedent("""
         # {title}
 
-        <!-- [![PyPi Version](https://img.shields.io/pypi/v/{name})](https://pypi.org/project/{name}/) -->
+        <!-- [![PyPI Version](https://img.shields.io/pypi/v/{name})](https://pypi.org/project/{name}/) -->
 
         <!-- [![Actions Status](https://github.com/{uname}/{name}/workflows/Unit%20Test/badge.svg)](https://github.com/{uname}/{name}/actions) -->
 
         [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+        <!-- [![Documentation Status](https://readthedocs.org/projects/{name}/badge/?version=latest)](https://{name}.readthedocs.io/en/latest/?badge=latest) -->
+    """.format(title=title, name=name, uname=uname).lstrip("\n"))
+
+
+def readme_rst(title, name, uname):
+    return textwrap.dedent("""
+        -------
+        {title}
+        -------
+
+        ..
+          .. image:: https://img.shields.io/pypi/v/{name}
+              :target: https://pypi.org/project/{name}/
+              :alt: PyPI Version
+
+        ..
+          .. image:: https://github.com/{uname}/{name}/workflows/Unit%20Test/badge.svg
+              :target: https://github.com/{uname}/{name}/actions
+              :alt: Actions Status
+
+        .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+            :target: https://github.com/psf/black
+            :alt: Code style: black
+
+        ..
+          .. image:: https://readthedocs.org/projects/{name}/badge/?version=latest
+              :target: https://{name}.readthedocs.io/en/latest/?badge=latest
+              :alt: Documentation Status
     """.format(title=title, name=name, uname=uname).lstrip("\n"))
 
 
@@ -21,14 +50,17 @@ def main():
     parser.add_argument("--project_title", "--project-title", required=True, nargs="+")
     parser.add_argument("--project_name", "--project-name", required=True, nargs="+")
     parser.add_argument("--uname", required=True, nargs="+")
-    parser.add_argument("--output", default="README.md")
+    parser.add_argument("--output", default="README")
+    parser.add_argument("--format", default="rst", choices=("rst", "md"), help="Should your read me be a markdown or a restructred text document?")
     args = parser.parse_args()
 
     title = " ".join(args.project_title)
     name = " ".join(args.project_name)
     uname = " ".join(args.uname)
 
-    with open(args.output, 'w') as f:
+    readme = readme_rst if args.format == "rst" else readme_md
+
+    with open("{}.{}".format(args.output, args.format), 'w') as f:
         f.write(readme(title, name, uname))
 
 

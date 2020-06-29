@@ -50,3 +50,10 @@
 ;(unpin! t)
 
 (package! flyspell)
+(package! org-journal)
+(package! evil-commentary)
+(package! org-ref)
+(package! ivy-bibtex)
+(package! org-roam-bibtex
+  :recipe (:host github :repo "org-roam/org-roam-bibtex"))
+(unpin! org-roam company-org-roam)

@@ -186,6 +186,8 @@ bindsym $MOD+Control+3 exec google-chrome
 bindsym $MOD+Control+4 exec slack
 bindsym $MOD+Control+5 exec mendeleydesktop
 
+bindsym $MOD+e exec emacs
+
 # Screenshots
 # The path needs to exist for this to work.
 # Screenshot everything
