@@ -146,40 +146,60 @@
         )
   )
 
-;; This seems to be an eager load :/
-(use-package! org-journal
-  :config
-  (setq
-        org-journal-dir org-roam-directory
-        org-journal-date-prefix "#+title: "
-        org-journal-file-format "%Y-%m-%d.org"
-        org-journal-data-format "%A, %d %B %Y"
-        org-journal-enable-agenda-integration t
-        org-journal-file-type 'daily
-        )
-)
-
 ;; Right now this will open the multiple windows where you can see a preview of the journal file being changed. I would like to remove that in the future
-(defun org-journal-find-location ()
+(defun bl/org-journal-find-location ()
   ;; Open today's journal, but specify a non-nil prefix argument in order to
   ;; inhibit inserting the heading; org-capture will insert the heading.
   (org-journal-new-entry t)
-  ;; Position point on the journal's top-level heading so that org-capture
+  ;; Position point on the journal's last top-level heading so that org-capture
   ;; will add the new entry as a child entry.
-  (goto-char (point-min)))
+  ;; First we go to the end of the file with point-max
+  (goto-char (point-max))
+  ;; then we search backwards for the first line that has a match of starting with a single *, the second character block say one of more
+  ;; anything but a * this will elimiate find a sub heading. This is based on the assumption that each day has a heading and all the
+  ;; notes you will capture on that day should be sub headings of that day.
+  (search-backward-regexp "^*[^*]*$")
+  ;; The version of this function I found on the internet used `point-min' to jump to the beginning of the file which assumed
+  ;; that the first heading lived there. That is fine for some daily notes but when you use org-capture for weekly/monthly it
+  ;; breaks. It also breaks if you have a header in the file.
+  )
 
 ;; This is the same as the above but we use let to override specific values to turn it from a daily journal into a monthly one that save somewhere else
 (defun work/org-journal-find-location ()
   (let ((org-journal-dir (bl/getenv "WORK_NOTEBOOK" "~/dev/work/notebooks/blester"))
         (org-journal-file-format "%Y-%m.org")
         (org-journal-file-type 'monthly))
-        (org-journal-find-location))
+        (bl/org-journal-find-location))
   )
 
-(add-to-list 'org-capture-templates '("w" "Work entry" entry (function work/org-journal-find-location)
+;; For some reason when I have a header insserted into the file the new entiries don't nest properly, TODO
+(defun bl/org-journal-file-header-func (time)
+  "Custom function to create journal header."
+  (concat
+    (pcase org-journal-file-type
+      (`daily (concat "#+title: " (format-time-string org-journal-date-format time) "\n#+startup: showeverything\n\n"))
+      (`weekly "#+title: Weekly Journal\n#+startup: folded\n\n")
+      (`monthly (concat "#+title: " (format-time-string "%B" time) " Journal\n#+startup: folded\n\n"))
+      (`yearly "#+title: Yearly Journal\n#+startup: folded\n\n")))
+  )
+
+
+;; This seems to be an eager load :/
+(use-package! org-journal
+  :config
+  (setq
+        org-journal-dir org-roam-directory
+        org-journal-file-format "%Y-%m-%d.org"
+        org-journal-date-format "%A, %d %B %Y"
+        org-journal-enable-agenda-integration t
+        org-journal-file-type 'daily
+        org-journal-file-header 'bl/org-journal-file-header-func
+      )
+  (add-to-list 'org-capture-templates '("w" "Work entry" entry (function work/org-journal-find-location)
                                       "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
-(add-to-list 'org-capture-templates '("j" "Journal entry" entry (function org-journal-find-location)
+  (add-to-list 'org-capture-templates '("j" "Journal entry" entry (function bl/org-journal-find-location)
                                       "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
+)
 
 ;; A daily collection of fleeting notes
 ;; (after! org-journal
