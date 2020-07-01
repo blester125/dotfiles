@@ -22,6 +22,8 @@
 (add-hook 'text-mode-hook 'auto-fill-mode)
 (setq-default fill-column 120)
 
+(setq org-ellipsis " ⤵")
+
 ;; Doom exposes five (optional) variables for controlling fonts in Doom. Here
 ;; are the three important ones:
 ;;
@@ -84,6 +86,15 @@
     )
   )
 
+;; Get an environment variable with a default value
+(defun bl/getenv (variable default &optional frame)
+  (let ((env (getenv variable frame))) ;; Proxy to getenv to get the var and save it into env
+    (if (not (null env)) ;; check if the value was nil
+        env ;; If the value was not nil evaluate the variable (note the lack of () because this is a variable not a function)
+      default  ;; Otherwise eval the default. Lisp will return the last value eval, there is no return statement
+      ))
+  )
+
 ;; Configuring spell checking which I def need lol
 (add-hook! 'text-mode-hook 'flyspell-mode)
 (add-hook! 'prog-mode-hook 'flyspell-prog-mode)
@@ -135,7 +146,7 @@
         )
   )
 
-;; this seems to be an eager load?
+;; This seems to be an eager load :/
 (use-package! org-journal
   :config
   (setq
@@ -144,16 +155,40 @@
         org-journal-file-format "%Y-%m-%d.org"
         org-journal-data-format "%A, %d %B %Y"
         org-journal-enable-agenda-integration t
+        org-journal-file-type 'daily
         )
 )
 
-;; A daily collection of fleeting notes
-(after! org-journal
-  (map! :leader
-        :prefix "r"
-        :desc "Create a new note for today" "j" #'org-journal-new-entry
-        )
+;; Right now this will open the multiple windows where you can see a preview of the journal file being changed. I would like to remove that in the future
+(defun org-journal-find-location ()
+  ;; Open today's journal, but specify a non-nil prefix argument in order to
+  ;; inhibit inserting the heading; org-capture will insert the heading.
+  (org-journal-new-entry t)
+  ;; Position point on the journal's top-level heading so that org-capture
+  ;; will add the new entry as a child entry.
+  (goto-char (point-min)))
+
+;; This is the same as the above but we use let to override specific values to turn it from a daily journal into a monthly one that save somewhere else
+(defun work/org-journal-find-location ()
+  (let ((org-journal-dir (bl/getenv "WORK_NOTEBOOK" "~/dev/work/notebooks/blester"))
+        (org-journal-file-format "%Y-%m.org")
+        (org-journal-file-type 'monthly))
+        (org-journal-find-location))
   )
+
+(add-to-list 'org-capture-templates '("w" "Work entry" entry (function work/org-journal-find-location)
+                                      "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
+(add-to-list 'org-capture-templates '("j" "Journal entry" entry (function org-journal-find-location)
+                                      "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
+
+;; A daily collection of fleeting notes
+;; (after! org-journal
+;;   (map! :leader
+;;         :prefix "r"
+;;         :desc "Create a new note for today" "j" #'org-journal-new-entry
+;;         )
+;;   )
+
 
 (set-file-template! "\\.org$" :ignore t)
 
