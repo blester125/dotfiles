@@ -156,9 +156,9 @@
   ;; First we go to the end of the file with point-max
   (goto-char (point-max))
   ;; then we search backwards for the first line that has a match of starting with a single *, the second character block say one of more
-  ;; anything but a * this will elimiate find a sub heading. This is based on the assumption that each day has a heading and all the
+  ;; anything but a * this will eliminate find a sub heading. This is based on the assumption that each day has a heading and all the
   ;; notes you will capture on that day should be sub headings of that day.
-  (search-backward-regexp "^*[^*]*$")
+  (search-backward-regexp "^\*[^*]*$")
   ;; The version of this function I found on the internet used `point-min' to jump to the beginning of the file which assumed
   ;; that the first heading lived there. That is fine for some daily notes but when you use org-capture for weekly/monthly it
   ;; breaks. It also breaks if you have a header in the file.
