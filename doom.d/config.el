@@ -186,6 +186,7 @@
 
 ;; This seems to be an eager load :/
 (use-package! org-journal
+  :after org-capture
   :config
   (setq
         org-journal-dir org-roam-directory
@@ -196,19 +197,10 @@
         org-journal-file-header 'bl/org-journal-file-header-func
       )
   (add-to-list 'org-capture-templates '("w" "Work entry" entry (function work/org-journal-find-location)
-                                      "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
+                                      "\n* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
   (add-to-list 'org-capture-templates '("j" "Journal entry" entry (function bl/org-journal-find-location)
-                                      "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
+                                      "\n* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
 )
-
-;; A daily collection of fleeting notes
-;; (after! org-journal
-;;   (map! :leader
-;;         :prefix "r"
-;;         :desc "Create a new note for today" "j" #'org-journal-new-entry
-;;         )
-;;   )
-
 
 (set-file-template! "\\.org$" :ignore t)
 
