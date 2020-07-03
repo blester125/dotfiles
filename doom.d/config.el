@@ -9,11 +9,13 @@
 (setq user-full-name "Brian Lester"
       user-mail-address "blester125@gmail.com")
 
-(setq notes (concat (getenv "HOME") "/notes") ;; Where I keep all my notes
-      zettelkasten (concat notes "/zettelkasten")
-      lit (concat zettelkasten "/lit")
-      bib (concat lit "/references.bib") ;; Where I keep my bibliographic notes
-      gtd (concat notes "/gtd") ;; Where I keep todos
+(setq notes (concat (getenv "HOME") "/notes/") ;; Where I keep all my notes
+      zettelkasten (concat notes "zettelkasten/")
+      lit (concat zettelkasten "lit/")
+      bib (concat lit "references.bib") ;; Where I keep my bibliographic notes
+      gtd (concat zettelkasten "gtd/") ;; Where I keep todos
+      inbox (concat gtd "inbox.org")
+      journal (concat zettelkasten "journal/") ;; Where I keep daily journals
       org-directory notes  ;; Where my general org notes are
       org-roam-directory zettelkasten ;; Where org-roam keeps all my files
       )
@@ -43,14 +45,9 @@
 (setq doom-theme 'doom-Iosvkem)
 (setq doom-font (font-spec :family "Input Mono" :size 14))
 
-;; If you use `org' and don't want your org files in the default location below,
-;; change `org-directory'. It must be set before org loads!
-(setq org-directory notes)
-
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 (setq display-line-numbers-type 'relative)
-
 
 ;; Here are some additional functions/macros that could help you configure Doom:
 ;;
@@ -98,19 +95,20 @@
 ;; Configuring spell checking which I def need lol
 (add-hook! 'text-mode-hook 'flyspell-mode)
 (add-hook! 'prog-mode-hook 'flyspell-prog-mode)
-;; This is turns on super mode where things like `_' are treaded as part of a word but that is isn't working with evil mode atm
+
+;; This is turns on superword mode where things like `_' are treaded as part of a word but that is isn't working with evil mode atm
 ;; (add-hook! 'python-mode-hook 'superword-mode)
+
 ;; Update the value of `_' in the syntax table so evil mode commands like `w' will not stop on this symbol, lets you manipulate a whole variable
 (add-hook! 'python-mode-hook #'(lambda () (modify-syntax-entry ?_ "w")))
 ;; use zg in normal mode to save a word to my dictonary like I do in vim
 (map! :n "z g" 'bl/save-word)
 
-
 ;; When I open a new window switch to it
 (after! evil
   (setq evil-vsplit-window-right t
         evil-split-window-below t)
-  (evil-commentary-mode)  ;; Use evil comentary so things like commenting a visual selection work
+  (evil-commentary-mode)  ;; Use evil commentary so things like commenting a visual selection work
   )
 
 ;; Ivy the selection library via fuzzy matching I use
@@ -131,6 +129,13 @@
   (map! :leader
         :prefix "n"
         "c" #'org-capture) ;; Capture notes into org mode with SPC n c
+  (setq org-capture-templates
+        '(("i" "Inbox entry" entry (file+headline inbox "Tasks")
+           "* TODO %i%?")
+          ("I" "Linked Inbox entry" entry (file+headline inbox "Tasks")
+           "* TODO %?\n %i\n %a")
+          )
+        )
   )
 
 ;; A Zettelkasten in org mode, the reason I switched
@@ -183,10 +188,9 @@
       (`yearly "#+title: Yearly Journal\n#+startup: folded\n\n")))
   )
 
-
-;; This seems to be an eager load :/
+;; A daily journal in org model that I access via org-capture
 (use-package! org-journal
-  :after org-capture
+  :after (org-capture org)
   :config
   (setq
         org-journal-dir org-roam-directory
@@ -204,10 +208,8 @@
 
 (set-file-template! "\\.org$" :ignore t)
 
-;; Find and take notes on bibliographic entries
-(use-package ivy-bibtex
-  :bind
-  ("C-x C-b" . ivy-bibtex)
+;; Find and take notes on bibliographic entries, Seems to be an eager load right now
+(use-package! ivy-bibtex
   :config
   (setq
    bibtex-completion-notes-path lit
@@ -237,16 +239,15 @@
 )
 
 (after! ivy-bibtex
-  (map! :leader
-        :prefix "r"
-        :desc "Get notes on a biblographic entry" "b" #'ivy-bibtex)
-  )
+ (map! :leader
+       :prefix "r"
+       :desc "Get notes on a biblographic entry" "r" #'ivy-bibtex)
+ )
 
-(use-package org-ref
-  :ensure t
-  :config
-  (setq
-    org-ref-bibliography-notes lit
-    org-ref-default-bibliograhy bib
-    )
-  )
+;; (use-package! org-ref
+;;   :config
+;;   (setq
+;;     org-ref-bibliography-notes lit
+;;     org-ref-default-bibliograhy bib
+;;     )
+;;   )
