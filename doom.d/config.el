@@ -21,7 +21,7 @@
       )
 
 
-(add-hook 'text-mode-hook 'auto-fill-mode)
+;; (add-hook 'text-mode-hook 'auto-fill-mode)
 (setq-default fill-column 120)
 
 (setq org-ellipsis " ⤵")
@@ -227,7 +227,7 @@
     ;; ":NOTER_DOCUMENT: %(orb-process-file-field \"${=key=}\")\n"
     ":AUTHOR: ${author-abbrev}\n"
     ":JOURNAL: ${journal}\n"
-    ":BOOKTITLE: %{booktitle}\n"
+    ":BOOKTITLE: ${booktitle}\n"
     ":DATE: ${date}\n"
     ":YEAR: ${year}\n"
     ":DOT: ${doi}\n"
@@ -251,3 +251,14 @@
 ;;     org-ref-default-bibliograhy bib
 ;;     )
 ;;   )
+
+;; (use-package! elpy
+;;   :defer t
+;;   :init
+;;   (advice-add 'python-mode :before 'elpy-enable)
+;;   )
+
+(use-package! visual-fill-column
+  :hook
+  (visual-line-mode . visual-fill-column-mode)
+  )
