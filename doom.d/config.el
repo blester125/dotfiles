@@ -136,6 +136,7 @@
            "* TODO %?\n %i\n %a")
           )
         )
+  (setq org-src-fontify-natively t)
   )
 
 ;; A Zettelkasten in org mode, the reason I switched
@@ -262,3 +263,6 @@
   :hook
   (visual-line-mode . visual-fill-column-mode)
   )
+
+(custom-set-faces!
+  '((org-block markdown-code-face) :background nil))

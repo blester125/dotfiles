@@ -15,7 +15,7 @@
 	process = git-lfs filter-process
 	required = true
 [user]
-	email = blester125@gmail.com
+	email = blester@interactions.com
 	name = Brian Lester
 [credential]
 	helper = store
