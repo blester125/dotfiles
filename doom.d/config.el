@@ -18,6 +18,7 @@
       journal (concat zettelkasten "journal/") ;; Where I keep daily journals
       org-directory notes  ;; Where my general org notes are
       org-roam-directory zettelkasten ;; Where org-roam keeps all my files
+      org-roam-db-location (concat (getenv "HOME") "/.org-roam.db")
       )
 
 
