@@ -220,3 +220,6 @@ for_window [class="^Steam$" title="^Steam - Self Updater$"] floating enable
 for_window [class="^Steam$" title="^Screenshot Uploader$"] floating enable
 for_window [class="^Steam$" title="^Steam Guard - Computer Authorization Required$"] floating enable
 for_window [title="^Steam Keyboard$"] floating enable
+
+bindsym $MOD+Shift+u exec xterm -name floating -e "~/.pyenv/versions/unicode-write/bin/unicode-lookup"
+for_window [class="XTerm" instance="floating"] floating enable move position center
