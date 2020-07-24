@@ -19,11 +19,7 @@ def readme_md(title, name, uname):
 
 
 def readme_rst(title, name, uname):
-    return textwrap.dedent("""
-        -------
-        {title}
-        -------
-
+    body = textwrap.dedent("""
         ..
           .. image:: https://img.shields.io/pypi/v/{name}
               :target: https://pypi.org/project/{name}/
@@ -42,7 +38,9 @@ def readme_rst(title, name, uname):
           .. image:: https://readthedocs.org/projects/{name}/badge/?version=latest
               :target: https://{name}.readthedocs.io/en/latest/?badge=latest
               :alt: Documentation Status
-    """.format(title=title, name=name, uname=uname).lstrip("\n"))
+    """.format(name=name, uname=uname).lstrip("\n"))
+    head = "-" * len(title) + "\n" + title + "\n" + "-" * len(title) + "\n\n"
+    return head + body
 
 
 def main():
