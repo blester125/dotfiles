@@ -138,6 +138,7 @@
           )
         )
   (setq org-src-fontify-natively t)
+  (require 'ox-reveal)
   )
 
 ;; A Zettelkasten in org mode, the reason I switched

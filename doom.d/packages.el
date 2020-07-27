@@ -59,3 +59,4 @@
 (unpin! org-roam company-org-roam)
 
 (package! visual-fill-column)
+(package! ox-reveal)
