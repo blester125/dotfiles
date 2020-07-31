@@ -130,6 +130,9 @@
   (map! :leader
         :prefix "n"
         "c" #'org-capture) ;; Capture notes into org mode with SPC n c
+  (map! :leader
+        :prefix "m"
+        "y" #'org-toggle-checkbox)
   (setq org-capture-templates
         '(("i" "Inbox entry" entry (file+headline inbox "Tasks")
            "* TODO %i%?")
