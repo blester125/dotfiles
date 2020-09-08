@@ -207,9 +207,9 @@
         org-journal-file-header 'bl/org-journal-file-header-func
       )
   (add-to-list 'org-capture-templates '("w" "Work entry" entry (function work/org-journal-find-location)
-                                      "\n* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
+                                      "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
   (add-to-list 'org-capture-templates '("j" "Journal entry" entry (function bl/org-journal-find-location)
-                                      "\n* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
+                                      "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
 )
 
 (set-file-template! "\\.org$" :ignore t)
