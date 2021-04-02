@@ -40,7 +40,6 @@
 ;; Use `:pin' to specify a particular commit to install.
 ;(package! builtin-package :pin "1a2b3c4d5e")
 
-
 ;; Doom's packages are pinned to a specific commit and updated from release to
 ;; release. The `unpin!' macro allows you to unpin single packages...
 ;(unpin! pinned-package)
@@ -49,6 +48,8 @@
 ;; ...Or *all* packages (NOT RECOMMENDED; will likely break things)
 ;(unpin! t)
 
+(when WORK (load (concat doom-private-dir "work-packages.el")))
+
 (package! flyspell)
 (package! org-journal)
 (package! evil-commentary)
@@ -56,7 +57,10 @@
 (package! ivy-bibtex)
 (package! org-roam-bibtex
   :recipe (:host github :repo "org-roam/org-roam-bibtex"))
-(unpin! org-roam company-org-roam)
+(unpin! org-roam)
+(unpin! company-org-roam)
+(unpin! ivy)
+(unpin! bibtex-completion ivy-bibtex)
 
 (package! visual-fill-column)
 (package! ox-reveal)

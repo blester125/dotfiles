@@ -12,6 +12,10 @@
 ;;      documentation. There you'll find a "Module Index" link where you'll find
 ;;      a comprehensive list of Doom's modules and what flags they support.
 
+(defconst WORK ; custom coding setup
+  ;; double-negate to extract truthy value
+  (not (not (string-match-p "google" (system-name)))))
+
 ;; NOTE Move your cursor over a module's name (or its flags) and press 'K' (or
 ;;      'C-c c k' for non-vim users) to view its documentation. This works on
 ;;      flags as well (those symbols that start with a plus).

@@ -1,5 +1,7 @@
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
+(when WORK (load (concat doom-private-dir "work-config.el")))
+
 ;; Place your private configuration here! Remember, you do not need to run 'doom
 ;; sync' after modifying this file!
 (setq x-super-keysym 'meta) ;; Set the left super key to the meta, avoid alt clashes with i3
@@ -44,7 +46,7 @@
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
 (setq doom-theme 'doom-Iosvkem)
-(setq doom-font (font-spec :family "Input Mono" :size 14))
+(setq doom-font (font-spec :family "Input Mono" :size 7))
 
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
@@ -132,7 +134,7 @@
         "c" #'org-capture) ;; Capture notes into org mode with SPC n c
   (map! :leader
         :prefix "m"
-        "y" #'org-toggle-checkbox)
+        "c" #'org-toggle-checkbox)
   (setq org-capture-templates
         '(("i" "Inbox entry" entry (file+headline inbox "Tasks")
            "* TODO %i%?")
@@ -148,12 +150,13 @@
 (after! org-roam
   (map! :leader
         :prefix "r"
-        :desc "open org-roam backlink panel" "l" #'org-roam
-        :desc "Insert new org-roam note" "i" #'org-roam-insert
+        :desc "Open org-roam backlink panel" "l" #'org-roam
+        :desc "Insert new org-roam link" "i" #'org-roam-insert
         :desc "Switch org-roam buffers" "b" #'org-roam-switch-to-buffer
-        :desc "Find an org-roam file" "f" #'org-roam-find-file
-        :desc "Show the org-roam graph" "g" #'org-roam-show-graph
+        :desc "Find an org-roam file, create if not found" "f" #'org-roam-find-file
+        :desc "Show the org-roam graph" "g" #'org-roam-graph-show
         :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
+        :desc "Open the current journal" "j" #'org-journal-open-current-journal-file
         )
   )
 
@@ -214,23 +217,35 @@
 
 (set-file-template! "\\.org$" :ignore t)
 
+(defun bl/add-cite (key)
+  "Prepend the string `cite:' to key."
+  (concat "cite:" key))
+
+(defun bl/bibtex-completion-insert-cite-key (keys)
+  "Insert BibTeX key with `cite:` prepended."
+  (insert
+   (funcall 'bibtex-completion-insert-key (mapcar 'bl/add-cite keys)))
+  )
+
+
 ;; Find and take notes on bibliographic entries, Seems to be an eager load right now
 (use-package! ivy-bibtex
   :config
+  ;; Create a ivy version of my cite key creation function
+  (ivy-bibtex-ivify-action bl/bibtex-completion-insert-cite-key ivy-bibtex-insert-cite-key)
   (setq
    bibtex-completion-notes-path lit
    bibtex-completion-bibliography bib
    bibtex-completion-pdf-field "file"
    bibtex-completion-pdf-symbol "⌘"
    bibtex-completion-notes-symbol "✎"
-   ivy-bibtex-default-action 'ivy-bibtex-edit-notes ;; When you select a biblographic entry open the notes on it, not sure how to do a different command tho
+   ivy-bibtex-default-action 'ivy-bibtex-insert-cite-key ;; When you select a biblographic entry insert a cite link. Use C-o to get a menu of actions, then e will open the note file.
    bibtex-completion-notes-template-multiple-files
    (concat
     "#+title: ${title}\n"
     "#+roam_key: cite:${=key=}\n\n"
     ":PROPERTIES:\n"
     ":Custom_ID: ${=key=}\n"
-    ;; ":NOTER_DOCUMENT: %(orb-process-file-field \"${=key=}\")\n"
     ":AUTHOR: ${author-abbrev}\n"
     ":JOURNAL: ${journal}\n"
     ":BOOKTITLE: ${booktitle}\n"
@@ -248,15 +263,25 @@
  (map! :leader
        :prefix "r"
        :desc "Get notes on a biblographic entry" "r" #'ivy-bibtex)
+ ;; Add an ivy action that inserts my version of cite lengths.
+ ;; Access extra actions with C-o and then pick an option.
+ (ivy-add-actions
+  'ivy-bibtex
+  '(("c" ivy-bibtex-insert-cite-key "Insert a cite link")))
  )
 
-;; (use-package! org-ref
-;;   :config
-;;   (setq
-;;     org-ref-bibliography-notes lit
-;;     org-ref-default-bibliograhy bib
-;;     )
-;;   )
+(use-package! org-ref
+   :init
+   (setq org-ref-completion-library 'org-ref-ivy-cite)
+   :config
+   (setq
+     org-ref-default-bibliography (list bib)
+     org-ref-notes-directory lit
+     org-ref-notes-function 'orb-edit-notes
+     bibtex-completion-bibliography bib
+     bibtex-completion-notes-path lit
+     )
+   )
 
 ;; (use-package! elpy
 ;;   :defer t
@@ -271,3 +296,19 @@
 
 (custom-set-faces!
   '((org-block markdown-code-face) :background nil))
+
+(use-package! org-roam-bibtex
+  :after org-roam
+  :hook (org-roam-mode . org-roam-bibtex-mode)
+  :config
+  (setq orb-insert-interface 'ivy-bibtex)
+  (setq orb-note-actions-interface 'ivy)
+  (setq orb-preformat-keywords
+        '("citekey" "title" "url" "file" "author-or-editor" "keywords" "ref" "author-abbrev" "journal" "booktitle" "date" "year" "doi"))
+  (setq orb-templates
+        '(("r" "ref" plain (function org-roam-capture--get-point)
+           ""
+           :file-name "lit/${citekey}"
+           :head "#+title: ${title}\n#+roam_key: cite:${citekey}\n:PROPERTIES:\n:Custom_ID: ${citekey}\n:AUTHOR: ${author-abbrev}\n:JOURNAL: ${journal}\n:BOOKTITLE: ${booktitle}\n:DATE: ${date}\n:YEAR: ${year}\n:DOT: ${doi}\n:URL: ${url}\n:END:\n\n* TODO Notes\n\n"
+           :unnarrowed t
+           ))))
