@@ -13,19 +13,14 @@
 (setq user-full-name "Brian Lester"
       user-mail-address "blester125@gmail.com")
 
-(setq notes (concat (getenv "HOME") "/notes/") ;; Where I keep all my notes
-      zettelkasten (concat notes "zettelkasten/")
-      lit (concat zettelkasten "lit/")
-      bib (concat lit "references.bib") ;; Where I keep my bibliographic notes
-      gtd (concat zettelkasten "gtd/") ;; Where I keep todos
-      inbox (concat gtd "inbox.org")
-      journal (concat zettelkasten "journal/")) ;; Where I keep daily journals
+(defvar notes (concat (getenv "HOME") "/notes/") "Where I keep all of my org files.")
+(defvar zettelkasten (concat notes "zettelkasten/") "Where I keep all of my notes.")
+(defvar lit (concat zettelkasten "lit/") "Where notes on papers (or anything with a bib reference) live.")
+(defvar bib (concat lit "references.bib") "Where I keep my large bibliography, in BibTex.")
 
 (setq org-directory notes  ;; Where my general org notes are
       org-roam-directory zettelkasten ;; Where org-roam keeps all my files
-      org-roam-db-location (concat (getenv "HOME") "/.org-roam.db")
-      )
-
+      org-roam-db-location (concat (getenv "HOME") "/.org-roam.db"))
 
 (setq-default fill-column 120)
 ;; Change the fill-column depending on if you are programming or just typing.
@@ -190,6 +185,7 @@
   ;; directory.
   (advice-add 'org-html-export-to-html :filter-return 'bl/org-export--move-output)
   (setq org-export-with-toc 'nil)
+  (setq org-html-htmlize-output-type 'css)
   (org-export-define-derived-backend 'html-roam 'html
     :menu-entry
     '(?h 2
@@ -211,6 +207,8 @@ the result will be a directory structure in `export-dir' the matches the
 structure in `base-dir'. If not specified it defaults to `org--export-directory'"
   (unless base-dir (setq base-dir org-roam-directory))
   (unless export-dir (setq export-dir org--export-directory))
+  (unless (file-exists-p export-dir)
+    (make-directory export-dir))
   (let ((dest (concat export-dir (string-remove-prefix base-dir filename))))
     (message "Moving exported file from %s to %s" filename dest)
     (rename-file filename dest 't)
@@ -294,35 +292,41 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
   ;; Setup a backup
   (run-at-time "02:30am" 'nil 'bl/org-roam--backup-notes))
 
-;; Right now this will open the multiple windows where you can see a preview of the journal file being changed. I would like to remove that in the future
+;; TODO(brianlester): Right now this will open the multiple windows where you
+;; can see a preview of the journal file being changed. I would like to remove
+;; that in the future
 (defun bl/org-journal-find-location (&optional search)
   (interactive)
   (let ((search (or search "^\*[^*]*$")))
     ;; Open today's journal, but specify a non-nil prefix argument in order to
     ;; inhibit inserting the heading; org-capture will insert the heading.
     (org-journal-new-entry t)
-    ;; Position point on the journal's last top-level heading so that org-capture
-    ;; will add the new entry as a child entry.
-    ;; First we go to the end of the file with point-max
+    ;; Position point on the journal's last top-level heading so that
+    ;; org-capture will add the new entry as a child entry. First we go to the
+    ;; end of the file with point-max
     (goto-char (point-max))
-    ;; then we search backwards for the first line that has a match of starting with a single *, the second character block say one of more
-    ;; anything but a * this will eliminate find a sub heading. This is based on the assumption that each day has a heading and all the
-    ;; notes you will capture on that day should be sub headings of that day.
+    ;; then we search backwards for the first line that has a match of starting
+    ;; with a single *, the second character block say one of more anything but
+    ;; a * this will eliminate find a sub heading. This is based on the
+    ;; assumption that each day has a heading and all the notes you will capture
+    ;; on that day should be sub headings of that day.
     (search-backward-regexp search)
-    ;; The version of this function I found on the internet used `point-min' to jump to the beginning of the file which assumed
-    ;; that the first heading lived there. That is fine for some daily notes but when you use org-capture for weekly/monthly it
-    ;; breaks. It also breaks if you have a header in the file.
+    ;; The version of this function I found on the internet used `point-min' to
+    ;; jump to the beginning of the file which assumed that the first heading
+    ;; lived there. That is fine for some daily notes but when you use
+    ;; org-capture for weekly/monthly it breaks. It also breaks if you have a
+    ;; header in the file.
   ))
 
-;; This is the same as the above but we use let to override specific values to turn it from a daily journal into a monthly one that save somewhere else
 (defun work/org-journal-find-location ()
+  "Find my monthly work journal."
   (let ((org-journal-dir (bl/getenv "WORK_NOTEBOOK" "~/dev/work/notebooks/blester"))
         (org-journal-file-format "%Y-%m.org")
         (org-journal-file-type 'monthly))
         (bl/org-journal-find-location))
   )
 
-;; For some reason when I have a header inserted into the file the new entries don't nest properly, TODO
+;; TODO: When there is a header in the file the new entries don't next properly.
 (defun bl/org-journal-file-header-func (time)
   "Custom function to create journal header."
   (concat
@@ -342,7 +346,9 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
         org-journal-file-format "%Y-%m-%d.org"
         org-journal-date-format "%A, %d %B %Y"
         org-journal-file-type 'daily
-        org-journal-file-header 'bl/org-journal-file-header-func)
+        org-journal-file-header 'bl/org-journal-file-header-func
+        org-journal-find-file 'find-file
+        org-journal-carryover-items "")
   (add-to-list 'org-capture-templates '("w" "Work entry" entry (function work/org-journal-find-location)
                                       "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
   (add-to-list 'org-capture-templates '("j" "Journal entry" entry (function bl/org-journal-find-location)
@@ -444,6 +450,7 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
   :after org-roam
   :hook (org-roam-mode . org-roam-bibtex-mode)
   :config
+  (setq org-roam-completion-everywhere 'nil)
   (setq orb-insert-interface 'ivy-bibtex)
   (setq orb-note-actions-interface 'ivy)
   (setq orb-preformat-keywords
@@ -558,6 +565,7 @@ added to the string."
 
 (defun bl/org--add-css-header (backend)
   "Add a CSS header to each org file as you export it"
+  (ignore backend)
   (goto-char (point-min))
   (insert (format "#+html_head: <link rel=\"stylesheet\" type=\"text/css\" href=\"%s\"/>\n" org--css-location)))
 
@@ -565,7 +573,9 @@ added to the string."
   "Parse a link into a property list."
   (let ((link-path (org-element-property :path link))
         (link-type (org-element-property :type link))
-        (link-end (org-element-property :end link)))
+        ;; Get the end of the actual link, without the following blanks.
+        (link-end (- (org-element-property :end link)
+                     (org-element-property :post-blank link))))
     (list :type link-type :path link-path :end link-end)))
 
 (defun bl/org--get-links-from-buffer ()
@@ -593,6 +603,7 @@ of the link in the buffer."
   "If cite links appear in an org file, add a bibliography link so it shows up in export.
 
 We need to parse the buffer for this because we don't have access to the filename."
+  (ignore backend)
   (when (bl/org-ref--get-cite-links-from-buffer)
       (goto-char (point-max))
       (insert (concat "bibliography:" (car org-ref-default-bibliography) "\n"))
@@ -617,7 +628,7 @@ We need to parse the buffer for this because we don't have access to the filenam
         ;; If there is an error in exporting, log it and move on instead of
         ;; crashing.
         (condition-case err
-            (org-html-export-to-html)
+            (org-html-export-to-html async subtreep visible-only body-only ext-plist)
           (error
            (message "%s filed to export" fullname)
            (message "%s" (error-message-string err))))))))
@@ -629,8 +640,8 @@ We need to parse the buffer for this because we don't have access to the filenam
   (let ((fullname (file-truename filename))
         (exported-file 'nil))
     (unless (member fullname exported)
-      (add-to-list 'exported fullname)
-      (message "Recursively exporting: %s" fullname)
+      (push fullname exported)
+      (message "Recursively exporting: %s" fullname async subtreep visible-only body-only ext-plist)
       ;; We read the file in again to find the links because it is was easy, this
       ;; should be updated to use the org roam db. We should also filter based on
       ;; some org tags.
@@ -638,6 +649,8 @@ We need to parse the buffer for this because we don't have access to the filenam
              (file-links (seq-remove (lambda (l) (not (equal (plist-get l :type) "file"))) links))
              (org-links (seq-remove (lambda (l) (not (equal (file-name-extension (plist-get l :path)) "org"))) file-links)))
         (message "Org Links to follow: %s" org-links)
+        (message "All file links: %s" file-links)
+        (message "All links: %s" links)
         (dolist (org-link org-links)
           (setq exported (nth 1 (-org-html-export-to-html-filename-recursive (plist-get org-link :path) async subtreep visible-only body-only ext-plist exported))))
         (setq exported-file (org-html-export-to-html-filename filename async subtreep visible-only body-only ext-plist))))
@@ -656,7 +669,9 @@ tag. The value for the private tag is defined by `org-roam--private-tag'."
       (unless (member note exported)
         ;; Update our set of exported files with all the files exported from this
         ;; recursive export expansion.
-        (setq exported (append 'exported (nth 1 (-org-html-export-to-html-filename-recursive note))))))))
+        (let* ((results (-org-html-export-to-html-filename-recursive note))
+               (exported-files (nth 1 results)))
+          (setq exported (append exported exported-files)))))))
 
 (defun org-html-export-to-html-filename-recursive (filename &optional async subtreep visible-only body-only ext-plist)
   "Wrapper around recursive export for cleaner interface."
@@ -691,16 +706,21 @@ exports to a superscript.
 
 We need to use the buffer based parsing so that we have access to the cite-link
 locations."
+  (interactive)
+  (ignore backend)
   (let* ((cite-links (bl/org-ref--get-cite-links-from-buffer))
+         ;; How many characters we have already inserted into the buffer,
+         ;; shifting where the ends are now.
          (offset 0))
     (dolist (cite-link cite-links)
       (when-let* ((note-loc (bl/org-roam--get-notes-from-ref (plist-get cite-link :path)))
                   (note-rel (file-relative-name note-loc))
                   (note-link (bl/org-ref--make-note-link note-rel 'nil 't))
                   (start (plist-get cite-link :end)))
-        (goto-char (+ offset start))
-        (insert note-link)
-        (setq offset (+ offset (length note-link)))))))
+        (unless (bl/org-roam--file-private-p note-loc)
+          (goto-char (+ offset start))
+          (insert note-link)
+          (setq offset (+ offset (length note-link))))))))
 
 (defun bl/image-link-p (path)
   "Check if a path most likely links to an image.
@@ -712,6 +732,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
 
 (defun bl/org-export--export-images (backend)
   "Copy any image that in linked in an exported file to the export images location."
+  (ignore backend)
   (let* ((links (bl/org--get-links-from-buffer))
          (image-links (seq-filter (lambda (l) (bl/image-link-p (plist-get l :path))) links))
          ;; We only need to move image files, an image link to the web will work fine.
@@ -724,7 +745,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
   "Find all cite-links in a file by querying the org-roam db."
   (org-roam-db-update-file filename)
   (when-let* ((links (org-roam-db-query
-                      [:select :distenct dest
+                      [:select :distinct dest
                        :from links
                        :where (and (= type "cite") (= source $s1))] filename))
               (links (seq-map (lambda (p) (list :path (car p) :type "cite")) links)))
@@ -754,7 +775,7 @@ Returns a list of note file names."
 If &optional `include-private' is non-nil, then fetch all notes, even ones with
 'private' tags. The value for the private tag is set with `org-roam--private-tag'
 
-Returns a list of link plists with attibutes `:path' and `:type'
+Returns a list of link plists with attributes `:path' and `:type'
 "
   (org-roam-db-update-file filename) ;; Make sure DB information is up to date.
   (when-let* ((links (if include-private
@@ -787,7 +808,7 @@ Returns a list of link plists with attibutes `:path' and `:type'
   (let ((private (org-roam-db-query [:select file
                                      :from tags
                                      :where (and (= file $s1)
-                                                 (not-like tags $r2))] filename org-roam--private-tag)))
+                                                 (like tags $r2))] filename (bl/like-query org-roam--private-tag))))
     (if private
         't
       'nil)))
@@ -813,7 +834,8 @@ Returns a list of file plists with `:path' and `:type' attributes.
               (if (or include-private (not (bl/org-roam--file-private-p note-loc)))
                 (add-to-list 'result (list :path note-loc :type "file"))))
             ;; Add all other links.
-            (add-to-list 'result link))))))
+          (add-to-list 'result link)))))
+  result)
 
 (defun bl/create-parent-directories (path)
   "Create partent directories for path is they don't already exist."
@@ -821,6 +843,14 @@ Returns a list of file plists with `:path' and `:type' attributes.
     (let ((dir (file-name-directory path)))
       (unless (file-exists-p dir)
         (make-directory dir 't)))))
+
+(defun bl/org-export--clear-export (&optional directory)
+  "Clear out the export directory. Recreate it empty afterwards."
+  (interactive)
+  (unless directory (setq directory org--export-directory))
+  (if (file-exists-p directory)
+      (if (y-or-n-p (format "Delete: '%s'?" directory))
+          (delete-directory directory 't))))
 
 (defun bl/org-roam--backup-notes (&optional directory)
   "Backup all my notes to a gzipped tarball.
@@ -834,7 +864,7 @@ Backups are saved in `%Y%m%d%H%M%S.tar.gz' files."
   (let* ((timestamp (org-format-time-string "%Y%m%d%H%M%S"))
          (backup-dir (concat directory timestamp "/"))
          (files (directory-files-recursively org-roam-directory ".*"))
-         (files (seq-remove (lambda (f) (string-match-p "/export/" f)) files)))
+         (files (seq-remove (lambda (f) (string-match-p org--export-directory f)) files)))
     (dolist (file files)
       (let* ((relative (string-remove-prefix org-roam-directory file))
              (dest (concat backup-dir relative)))
@@ -843,3 +873,28 @@ Backups are saved in `%Y%m%d%H%M%S.tar.gz' files."
     (let ((default-directory directory))
       (if (= (call-process "tar" 'nil 'nil 'nil "-czvf" (concat timestamp ".tar.gz") timestamp) 0)
           (delete-directory backup-dir 't)))))
+
+
+(defun bl/prepare-file-system-for-notes ()
+  "Setup directory structure for note taking.
+
+Note: This assumes things like org-roam and org-export have been loaded and
+their special variables defined. This is fine because we don't expect this
+function to be run often, just when you are initializing a new computer.
+  "
+  (interactive)
+  ;; We store the lit dir as a subdir of these other directories so we could
+  ;; just to a mkdir with -p but might not always so we explicitly create each
+  ;; directory.
+  (unless (file-exists-p notes)
+    (make-directory notes 't))
+  (unless (file-exists-p zettelkasten)
+    (make-directory zettelkasten 't))
+  (unless (file-exists-p lit)
+    (make-directory lit 't))
+  (unless (file-exists-p org--export-directory)
+    (make-directory org--export-directory 't)
+    (make-directory (concat org--export-directory "lit") 't)
+    (make-directory (concat org--export-directory "images") 't))
+  (unless (file-exists-p org-roam--backup-directory)
+    (make-directory org-roam--backup-directory 't)))
