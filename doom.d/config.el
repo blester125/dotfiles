@@ -26,6 +26,7 @@
 ;; Change the fill-column depending on if you are programming or just typing.
 (setq-hook! 'text-mode-hook fill-column 120)
 (setq-hook! 'prog-mode-hook fill-column 80)
+(setq-hook! 'prog-mode-hook #'display-fill-column-indicator-mode)
 
 ;; The symbol used when you have an org header closed.
 (setq org-ellipsis " ⤵")
@@ -217,6 +218,8 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
 
 ;; Set the characters that different priorities are displayed as.
 (after! org-fancy-priorities
+  ;; :hook ((org-mode . org-fancy-priorities-mode)
+  ;;        (evil-org-agenda-mode . org-fancy-priorities-mode))
   (setq org-fancy-priorities-list '((?A . "⚑")
                                     (?B . "🔥") ;; They don't support emojis so this looks different in the actual list.
                                     (?C . "⬆")
@@ -288,9 +291,7 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
   (advice-add 'org-todo-list :before #'bl/update-agenda-files)
   ;; Use my custom function which removes some tags (like TODO) instead of the
   ;; default when turning a note into a string.
-  (advice-add 'org-roam--add-tag-string :override #'bl/org-roam--add-tag-string)
-  ;; Setup a backup
-  (run-at-time "02:30am" 'nil 'bl/org-roam--backup-notes))
+  (advice-add 'org-roam--add-tag-string :override #'bl/org-roam--add-tag-string))
 
 ;; TODO(brianlester): Right now this will open the multiple windows where you
 ;; can see a preview of the journal file being changed. I would like to remove
@@ -874,6 +875,8 @@ Backups are saved in `%Y%m%d%H%M%S.tar.gz' files."
       (if (= (call-process "tar" 'nil 'nil 'nil "-czvf" (concat timestamp ".tar.gz") timestamp) 0)
           (delete-directory backup-dir 't)))))
 
+;; Setup a backup
+(run-at-time "02:30am" 'nil 'bl/org-roam--backup-notes)
 
 (defun bl/prepare-file-system-for-notes ()
   "Setup directory structure for note taking.
