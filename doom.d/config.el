@@ -126,6 +126,7 @@
 
 ;; Ignore the __pycache__ (as well as auto saves and backups) when searching for file
 (after! counsel
+  (setq counsel-rg-base-command '("rg" "--max-columns" "240" "--max-columns-preview" "--with-filename" "--no-heading" "--line-number" "--color" "never" "%s"))
   (setq counsel-find-file-ignore-regexp "\\(?:^[#.]\\)\\|\\(?:[#~]$\\)\\|\\(?:^Icon?\\)\\|\\(?:__pycache__\\)")
   ;; Add our insert roam link from counsel-rg search.
   (ivy-add-actions 'counsel-rg '(("r" bl/ivy-insert-org-roam-link "Insert Org-Roam link."))))
