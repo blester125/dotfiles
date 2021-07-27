@@ -26,7 +26,7 @@
 ;; Change the fill-column depending on if you are programming or just typing.
 (setq-hook! 'text-mode-hook fill-column 120)
 (setq-hook! 'prog-mode-hook fill-column 80)
-(setq-hook! 'prog-mode-hook #'display-fill-column-indicator-mode)
+(add-hook! 'prog-mode-hook #'display-fill-column-indicator-mode)
 
 ;; The symbol used when you have an org header closed.
 (setq org-ellipsis " ⤵")
@@ -876,7 +876,7 @@ Backups are saved in `%Y%m%d%H%M%S.tar.gz' files."
           (delete-directory backup-dir 't)))))
 
 ;; Setup a backup
-(run-at-time "02:30am" 'nil 'bl/org-roam--backup-notes)
+;; (run-at-time "02:30am" 'nil 'bl/org-roam--backup-notes)
 
 (defun bl/prepare-file-system-for-notes ()
   "Setup directory structure for note taking.

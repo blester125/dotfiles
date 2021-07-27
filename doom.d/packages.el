@@ -64,3 +64,4 @@
 
 (package! visual-fill-column)
 (package! ox-reveal)
+(package! yankpad)
