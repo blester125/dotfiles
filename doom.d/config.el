@@ -36,6 +36,11 @@
 (setq-hook! 'prog-mode-hook fill-column 80)
 (add-hook! 'prog-mode-hook #'display-fill-column-indicator-mode)
 
+;; Virtually wrap lines at `fill-column' characters.
+(use-package! visual-fill-column
+  :hook
+  (visual-line-mode . visual-fill-column-mode))
+
 ;; The symbol used when you have an org header closed.
 (setq org-ellipsis " ⤵")
 
@@ -93,6 +98,9 @@
 ;; use zg in normal mode to save a word to my dictonary like I do in vim
 (map! :n "z g" 'bl/save-word)
 
+;; It isn't a perfect match but use python highlighting when editing gin config files.
+(add-to-list 'auto-mode-alist '("\\.gin$" . python-mode))
+
 (defun bl/string-from-file (file-path)
   "Return file-path's file content as a string."
   (with-temp-buffer
@@ -110,9 +118,6 @@
 ;; Configuring spell checking which I def need lol
 (add-hook! 'text-mode-hook 'flyspell-mode)
 (add-hook! 'prog-mode-hook 'flyspell-prog-mode)
-
-;; This is turns on superword mode where things like `_' are treaded as part of a word but that is isn't working with evil mode atm
-;; (add-hook! 'python-mode-hook 'superword-mode)
 
 ;; Update the value of `_' in the syntax table so evil mode commands like `w' will not stop on this symbol, lets you manipulate a whole variable
 (add-hook! 'python-mode-hook (modify-syntax-entry ?_ "w"))
@@ -184,7 +189,7 @@ If &optinoal `force' is supplied, create the drawer if it does not exist."
         "c" #'org-capture) ;; Capture notes into org mode with SPC n c
   (map! :leader
         :prefix ("m" . "org-mode")
-        :desc "Open my global todo list" "T" #'org-todo-list
+        :desc "Open my global todo list" "T" #'org-todo-list ;; Build a global todo list from files with the todo filetags
         :desc "Insert an empty property drawer" "O" (lambda () (interactive) (org-insert-property-drawer)))
   (setq org-src-fontify-natively 't)  ;; Use syntax highlighting for code blocks.
   ;; The available TODO states, the ones after the "|" are considered finished.
@@ -198,13 +203,15 @@ If &optinoal `force' is supplied, create the drawer if it does not exist."
           ("KILL" . +org-todo-cancel)))
   ;; Set the range of priority levels from A -> F.
   (setq org-priority-lowest ?F)
-  (setq org-priority-default ?F)
+  (setq org-priority-default ?F) ;; Headlines without priorities are lowest at F
   ;; Set colors for priority levels
   (setq org-priority-faces '((?A . error)
                              (?B . warning)
                              (?C . rising)
                              (?D . chill)
                              (?E . success)))
+  ;; Headlines without priorities inherit their parents, helps grouping subtasks
+  ;; without needing to add priorities to all of them.
   (setq org-priority-get-priority-function #'bl/org-inherited-priority)
   (advice-add 'org-insert-property-drawer :after-while 'bl/org-insert-downcased-property-drawer)
   ;; Highlight the word NOWORK in org-agenda. It doesn't use font-lock so I had
@@ -214,42 +221,24 @@ If &optinoal `force' is supplied, create the drawer if it does not exist."
     (lambda ()
       (highlight-regexp "NOWORK" 'NOWORK-face))))
 
-(defun bl/org-html-section (fn &rest args)
-  "A wrapper around `org-html-section' to handle top-level processing."
-  (pcase-let* ((`(,section ,contents ,info) args)
-               (parent (org-export-get-parent-headline section)))
-    ;; no parent means we are the head of the file
-    (if (not parent)
-        (let ((tags (plist-get info :filetags)))
-          (if tags
-              (concat (org-html--tags tags info) contents)
-            contents))
-      ;; Any other section, just return the normal results.
-      (apply fn args))))
+;; Keybinding for monthly and yearly agenda views.
+(map! :after evil-org-agenda
+      :map evil-org-agenda-mode-map
+      :m "y" 'org-agenda-year-view
+      :m "m" 'org-agenda-month-view)
 
-(defun bl/org-html-paragraph (fn &rest args)
-  "Special processing for the paragraph inside the toplevel property drawer"
-  (pcase-let* ((`(,paragraph ,contents ,info) args)
-               (parent (org-export-get-parent paragraph))
-               (parent-type (org-element-type parent))
-               (headline (org-export-get-parent-headline paragraph)))
-    ;; TODO Add handling to remove the drawer if the only thing we have is `ID'?
-    (if (and (eq parent-type 'drawer)
-             (not headline))
-        (replace-regexp-in-string "^:" "" contents)
-      (apply fn args))))
-
+;; Exporting org files to other formats.
 (use-package! ox
   :after org
   :config
-  ;; Make sure each org file has the CSS file added to it.
   (defvar org--css-location "https://gongzhitaao.org/orgcss/org.css" "The location where the CSS stylesheet we use for org-mode html exports lives.")
   ;; Use hook to add a css header to the file before exporting it.
   (add-hook! 'org-export-before-parsing-hook #'bl/org--add-css-header)
   ;; The directory where exports will live so they aren't littered around our
   ;; zettelkasten.
   (defvar org--export-directory (concat org-roam-directory "export/") "Where exported org mode files will appear.")
-  ;; Use hook to make sure any image links are copied over into the export.
+  ;; Use hook to make sure any image files that are linked to are copied over
+  ;; into the export directory.
   (add-hook! 'org-export-before-parsing-hook 'bl/org-export--export-images) ;; Don't bite compile because we check variables.
   ;; Add a function that makes sure the output file name of an export will be
   ;; the absolute path.
@@ -258,15 +247,21 @@ If &optinoal `force' is supplied, create the drawer if it does not exist."
   ;; default export directory (the same one the file is in) into the export
   ;; directory.
   (advice-add 'org-html-export-to-html :filter-return 'bl/org-export--move-output)
-  ;; Add function that handles exporting the top-level filetags
-  (advice-add 'org-html-section :around 'bl/org-html-section)
-  ;; Add a function that handles formatting the top-level properties drawer.
-  (advice-add 'org-html-paragraph :around 'bl/org-html-paragraph)
-  ;; Always use the property draw based export.
-  (advice-add 'org-html-drawer :override 'org-html-property-drawer)
+  ;; Override the priority html transcoding to turn priority cookies into their
+  ;; fancy values.
+  (advice-add 'org-html--priority :override 'bl/org-html--priority)
+  ;; Don't create a table of contents.
   (setq org-export-with-toc 'nil)
+  ;; Use CSS classes/ids to style, not inline style attributes.
   (setq org-html-htmlize-output-type 'css)
+  ;; Include priorities in the export
+  (setq org-export-with-priority 't)
+  ;; Don't include the large `<style></style>' tags in the header as they can
+  ;; conflict with our actual style sheet.
+  (setq org-html-style-default 'nil)
   (setq org-html-head-include-default-style 'nil)
+  ;; Create a derived backend based on the html backend so we can add new export
+  ;; options to the menu, under the html selector.
   (org-export-define-derived-backend 'html-roam 'html
     :menu-entry
     '(?h 2
@@ -275,6 +270,10 @@ If &optinoal `force' is supplied, create the drawer if it does not exist."
               (lambda (a s v b)
                 (if a (org-html-export-to-html-recursive t s v b)
                   (org-open-file (org-html-export-to-html-recursive nil s v b)))))))))
+
+;; For fancy js-reveal presentations
+(use-package! ox-reveal
+  :after ox)
 
 (defun bl/org-export--move-output (filename &optional base-dir export-dir)
   "When exporting, move the resulting file from `filename' to the `export-dir'
@@ -295,20 +294,136 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
     (rename-file filename dest 't)
     dest))
 
+(defun bl/image-link-p (path)
+  "Check if a path most likely links to an image.
+
+Checks is the link is in a /images/ subdir or ends with a commong image file extension."
+  (if (or (not (null (string-match-p (regexp-quote "/images/") path)))
+          (seq-some (lambda (ext) (string-suffix-p ext path)) image-file-name-extensions))
+      't))
+
+(defun bl/org-export--export-images (backend)
+  "Copy any image that in linked in an exported file to the export images location."
+  (ignore backend)
+  (let* ((links (bl/org--get-links-from-buffer))
+         (image-links (seq-filter (lambda (l) (bl/image-link-p (plist-get l :path))) links))
+         ;; We only need to move image files, an image link to the web will work fine.
+         (file-image-links (seq-filter (lambda (l) (equal (plist-get l :type) "file")) image-links))
+         (image-locs (seq-map (lambda (l) (file-truename (plist-get l :path))) file-image-links))
+         (image-export-locs (seq-map (lambda (l) (concat org--export-directory (string-remove-prefix org-roam-directory l))) image-locs)))
+    (seq-mapn (lambda (src dst) (copy-file src dst 't)) image-locs image-export-locs)))
+
+(defun bl/org--add-css-header (backend)
+  "Add a CSS header to each org file as you export it"
+  (ignore backend)
+  (goto-char (bl/org-end-of-property-drawer (point-min)))
+  (newline)
+  (insert (format "#+html_head: <link rel=\"stylesheet\" type=\"text/css\" href=\"%s\"/>\n" org--css-location)))
+
+(defun bl/org-inherited-priority (header)
+  "Search parent headings to allow of inheritence of priority."
+  (cond
+   ;; Priority cookie in this heading
+   ((string-match org-priority-regexp header)
+    (* 1000 (- org-priority-lowest (org-priority-to-value (match-string 2 header)))))
+   ;; No priority cookite by we are a top level header
+   ((not (org-up-heading-safe))
+    (* 1000 (- org-priority-lowest org-priority-default)))
+   ;; Look for the parent's priority
+   (t
+    (bl/org-inherited-priority (org-get-heading)))))
 
 ;; Set the characters that different priorities are displayed as.
 (after! org-fancy-priorities
-  ;; :hook ((org-mode . org-fancy-priorities-mode)
-  ;;        (evil-org-agenda-mode . org-fancy-priorities-mode))
   (setq org-fancy-priorities-list '((?A . "⚑")
                                     (?B . "🔥") ;; They don't support emojis so this looks different in the actual list.
                                     (?C . "⬆")
                                     (?D . "❄")
                                     (?E . "■"))))
 
+(defun bl/org-html--priority (priority info)
+  "Replace priority with the fancy symbol for it when exporting."
+  (ignore info)
+  (and priority
+       (format "<span class=\"priority\">%s</span>"
+               (org-fancy-priorities-get-value (char-to-string priority)))))
+
+
 ;; Highlight the word NOWORK in org-mode.
 (font-lock-add-keywords 'org-mode
                         '(("NOWORK" . 'NOWORK-face)))
+
+;; A Zettelkasten in org mode, the reason I switched
+(after! org-roam
+  (org-roam-setup)
+  (map! :leader
+        :prefix ("r" . "roam")
+        :desc "Open org-roam backlink panel" "l" #'org-roam-buffer-toggle
+        :desc "Insert a new org-roam link" "i" #'org-roam-node-insert
+        ;; TODO Once supported have a no, input template.
+        ;; :desc "Insert a new org-roam link, create with template if missing" "I" #'org-roam-insert-immediate
+        ;; :desc "Switch org-roam buffers" "b" #'org-roam-switch-to-buffer
+        :desc "Find an org-roam file, create if not found" "f" #'org-roam-node-find
+        :desc "Show the org-roam graph" "g" #'org-roam-graph
+        :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
+        :desc "Open the current journal" "j" #'bl/org-journal-find-location
+        :desc "Search notes" "s" #'bl/org-roam--counsel-rg)
+  ;; The default text that is populated in a new org-roam note. We define a single
+  ;; template so we don't have to select between them.
+  (setq org-roam-capture-templates
+        '(("d" "default" plain "%?"
+           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                              "#+title: ${title}\n#+startup: latexpreview\n\n")
+           :unnarrowed t)))
+  ;; A method that counts the number of backlinks a node has. Need to be defined
+  ;; after org-roam is loaded to have access to this `org-roam-node' thing.
+  (cl-defmethod org-roam-node-backlinkscount ((node org-roam-node))
+    (let* ((count (caar (org-roam-db-query [:select (funcall count source)
+                                            :from links
+                                            :where (and (= dest $s1)
+                                                        (= type "id"))]
+                                           (org-roam-node-id node)))))
+      (propertize (format "[%d]" count) 'face 'shadow)))
+  ;; Stop trying to make everything I type a note.
+  (setq org-roam-completion-everywhere 'nil)
+  (defvar org-roam--backup-directory (concat notes "backups/") "A location where note backups are saved.")
+  (defvar org-roam--private-tag "private" "A roam tag that marks a note as private, not for export.")
+  ;; Set the tag value that org uses to decide if a subtree should be skipped during export.
+  (setq org-export-exclude-tags (list org-roam--private-tag))
+  (defvar org-roam--todo-markers '("todo") "A roam tag that marks a file as needing to be parsed for TODOs. The first item in this list will automatically be added to any file that has a TODO.")
+  (defvar org-roam--agenda-markers '("agenda") "A roam tag that marks a file as containing agenda items, regardless of it has TODOs.")
+  ;; Any file that contains one of the tags above will automatically be searched
+  ;; when calling `org-todo-list' or `org-agenda'.
+  (defvar org-roam-find-file--ignore-tags (append org-roam--todo-markers org-roam--agenda-markers '("private")) "A list of tags that should not be displated with searching.")
+  ;; The formatting string for nodes in the search, shows headline nesting, tags,
+  ;; and the backlink count.
+  (setq org-roam-node-display-template "${doom-hierarchy:*} ${doom-tags:15} ${backlinkscount:6}")
+  ;; Removed from V2: Look for TODOs and update the roam_tags when you open a
+  ;; roam file. Updating the todo tags always causes a modification to the file,
+  ;; even if we don't change state (for example we already has the todo tag and
+  ;; we currently have a TODO item). This causes recursive exporting to ask for
+  ;; human input on if a modified buffer should be killed, which we need to avoid.
+  ;; (add-hook! 'org-roam-find-file-hook 'bl/org-tags-update-todo)
+  ;; Instead we add this as a saving hook when the roam file is loaded. This
+  ;; avoids running the hook on non-roam files.
+  (add-hook! 'org-roam-find-file-hook (add-hook! 'before-save-hook :local 'bl/org-tags-update-todo))
+  ;; Query the Org-Roam db for files with TODO/agenda tasks before loading the
+  ;; org-agenda or todo list.
+  (advice-add 'org-agenda :before #'bl/update-agenda-files)
+  (advice-add 'org-todo-list :before #'bl/update-agenda-files)
+  ;; Use my custom function which removes some tags (like TODO) when searching for nodes.
+  (advice-add 'org-roam-node-doom-tags :filter-return 'bl/org-roam-node-doom-tags))
+
+(defun bl/org-roam-node-doom-tags (tags)
+  "Remove ignored tags from the roam search formatting.
+
+Removes any tag in tags (which is formatted as an org tag string) that are present
+in `org-roam-find-file--ignore-tags'
+
+Applies the `shadow' face as a property, like the default doom-tags does."
+  (let* ((tags (split-string tags ":" 't))
+         (tags (seq-remove (lambda (elt) (member elt org-roam-find-file--ignore-tags)) tags)))
+    (propertize (org-make-tag-string tags) 'face 'shadow)))
 
 (defun bl/org-roam--counsel-rg (&optional INITIAL-INPUT)
   "Full text search with counsel-rg (using ripgrep) specific to searching my notes."
@@ -319,59 +434,45 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
   (counsel-rg INITIAL-INPUT org-roam-directory "--glob **/*.org" "org-roam search: "))
 
 (defun bl/ivy-insert-org-roam-link (candidate)
-  "Insert an org-roam link based on the selected file from search. Assumes the candidates are in the format `file-name:...'
+  "Insert an org-roam link based on the selected file from search.
 
-  Note: This function doesn't support adding new files on the fly.
-  "
+Assumes the candidates are in the format `file-name:line-number:...'. Currently
+this function uses (or creates) the org node for the closest headline. Can be
+edited to instead just use the enclosing org-roam node, creating one at the
+top-level is there are none in the file."
   (interactive)
   ;; Make things like insert go into the caller buffer instead of the minibuffer.
   (with-ivy-window
-    (let* ((filename (car (split-string candidate ":")))
-           ;; Load the note you found into a temp buffer so that org-roam can extract the title.
-           (slug (with-temp-buffer
-                   (insert-file-contents filename)
-                   (car (org-roam--extract-titles-title)))))
-      (insert (format "[[file:%s][%s]]" filename slug)))))
-
-;; A Zettelkasten in org mode, the reason I switched
-(after! org-roam
-  (map! :leader
-        :prefix ("r" . "roam")
-        :desc "Open org-roam backlink panel" "l" #'org-roam
-        :desc "Insert a new org-roam link" "i" #'org-roam-insert
-        :desc "Insert a new org-roam link, create with template if missing" "I" #'org-roam-insert-immediate
-        :desc "Switch org-roam buffers" "b" #'org-roam-switch-to-buffer
-        :desc "Find an org-roam file, create if not found" "f" #'org-roam-find-file
-        :desc "Show the org-roam graph" "g" #'org-roam-graph-show
-        :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
-        :desc "Open the current journal" "j" #'bl/org-journal-find-location
-        :desc "Search notes" "s" #'bl/org-roam--counsel-rg)
-  ;; The default text that is populated in a new org-roam note.
-  (setq org-roam-capture-templates
-        (quote (("d" "default" plain (function org-roam--capture-get-point)
-                 "%?"
-                 :file-name "%<%Y%m%d%H%M%S>-${slug}"
-                 :head "#+title: ${title}\n#+startup: latexpreview\n\n"
-                 :unnarrowed t))))
-  (defvar org-roam--backup-directory (concat notes "backups/") "A location where note backups are saved.")
-  (defvar org-roam--private-tag "private" "A roam tag that marks a note as private, not for export.")
-  (defvar org-roam--todo-markers '("todo") "A roam tag that marks a file as needing to be parsed for TODOs. The first item in this list will automatically be added to any file that has a TODO.")
-  (defvar org-roam--agenda-markers '("agenda") "A roam tag that marks a file as containing agenda items, regardless of it has TODOs.")
-  ;; Any file that contains one of the tags above will automatically be searched
-  ;; when calling `org-todo-list' or `org-agenda'.
-  (defvar org-roam-find-file--ignore-tags (append org-roam--todo-markers org-roam--agenda-markers '("private")) "A list of tags that should not be displated with searching.")
-  ;; Look for TODOs and update the roam_tags when you open a roam file.
-  (add-hook! 'org-roam-file-setup-hook #'bl/roam-tags-update-todo)
-  ;; Look for TODOs and update the roam tags when you save a file. Would like to
-  ;; find a more specialized hook.
-  (add-hook! 'before-save-hook #'bl/roam-tags-update-todo)
-  ;; Query the Org-Roam db for files with TODO/agenda tasks before loading the
-  ;; org-agenda or todo list.
-  (advice-add 'org-agenda :before #'bl/update-agenda-files)
-  (advice-add 'org-todo-list :before #'bl/update-agenda-files)
-  ;; Use my custom function which removes some tags (like TODO) instead of the
-  ;; default when turning a note into a string.
-  (advice-add 'org-roam--add-tag-string :override #'bl/org-roam--add-tag-string))
+    (pcase-let* ((`(,filename, line-number) (split-string candidate ":"))
+                 ;; Switch to the buffer of the file from the search and find/create
+                 ;; the nearest org-roam node.
+                 (id (with-current-buffer filename
+                     (save-excursion
+                       (goto-char (point-min))
+                       ;; Jump forward to the line the match was on.
+                       (forward-line (string-to-number line-number))
+                       ;; This `let' will use the nearest org-roam node, creating
+                       ;; one if there is none in the file.
+                       ;; (let ((node (org-roam-node-at-point)))
+                       ;;   ;; Save the file and update the db in case we had to
+                       ;;   ;; create a new node.
+                       ;;   (save-buffer)
+                       ;;   (org-roam-db-update-file filename)
+                       ;;   (org-roam-node-id node)))))
+                       ;; This `let' will create a new org-roam node for the
+                       ;; nearest headline.
+                       (let ((id (org-id-get-create)))
+                         ;; Save the file and update the db in case we had to
+                         ;; create a new node.
+                         (save-buffer)
+                         (org-roam-db-update-file filename)
+                         id))))
+                 ;; Get node information from the id, will pull db which is why
+                 ;; we saved the file after (possibly) making an org-roam node.
+                 (node (org-roam-node-from-id id))
+                 (title (org-roam-node-title node)))
+      ;; Create and insert a id link.
+      (insert (format "[[id:%s][%s]]" id title)))))
 
 ;; TODO(brianlester): Right now this will open the multiple windows where you
 ;; can see a preview of the journal file being changed. I would like to remove
@@ -423,12 +524,17 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
   :after (org-capture org)
   :config
   (setq
+        ;; TODO should daily journals have their own dir? Will all the exporting
+        ;; work correctly?
         org-journal-dir org-roam-directory
         org-journal-file-format "%Y-%m-%d.org"
         org-journal-date-format "%A, %d %B %Y"
         org-journal-file-type 'daily
         org-journal-file-header 'bl/org-journal-file-header-func
         org-journal-find-file 'find-file
+        ;; Don't move things like TODO headlines forward in the journal, We can
+        ;; use the global todo list to find these and moving them forward could
+        ;; remove them from their context.
         org-journal-carryover-items "")
   (add-to-list 'org-capture-templates '("w" "Work entry" entry (function work/org-journal-find-location)
                                       "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
@@ -441,24 +547,44 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
         :desc "Plain Text Search in the Journal" "s" #'org-journal-search)
 )
 
+;; Don't include template text when created a org file from scratch, it doesn't
+;; happen often and there isn't a real need.
 (set-file-template! "\\.org$" :ignore t)
 
-(defvar lit-note-template (concat "#+title: ${title}\n"
-                                  "#+roam_key: cite:${citekey}\n"
-                                  "#+startup: latexpreview\n\n"
-                                  "#+caption: Bibliographic Information\n"
-                                  "| Field | Value |\n"
-                                  "|-------+-------|\n"
-                                  "| custom_id | ${citekey} |\n"
-                                  "| author | ${author-abbrev} |\n"
-                                  "| journal | ${journal} |\n"
-                                  "| booktitle | ${booktitle} |\n"
-                                  "| date | ${date} |\n"
-                                  "| year | ${year} |\n"
-                                  "| doi | ${doi} |\n"
-                                  "| url | ${url} |\n\n"
-                                  "* Notes\n") "The template for creating a new Litature Note.")
+;; TODO Update, add yanks for things like #+begin_src with lang and session values
+(use-package! yankpad
+  :config
+  (setq yankpad-file (concat doom-private-dir "yankpad.org"))
+  (map! :leader
+        :desc "Snippits with Yankpad"
+        "y" #'yankpad-insert))
 
+;; Override the default themes awful background for markdown code block backgrounds.
+(custom-set-faces!
+  '((org-block markdown-code-face) :background nil))
+
+(defvar lit-note-template (concat ":properties:\n"
+                                ":author: ${author-abbrev}\n"
+                                ":journal: ${journal}\n"
+                                ":booktitle: ${booktitle}\n"
+                                ":date: ${date}\n"
+                                ":year: ${year}\n"
+                                ":doi: ${doi}\n"
+                                ":url: ${url}\n"
+                                ":end:\n"
+                                "#+title: ${title}\n"
+                                "#+setup: latexpreview\n")
+"The template for creating a new Litature Note.")
+
+(defun bl/ivy-bibtex (&optional ARG LOCAL-BIB)
+  "Wrapper around `ivy-bibtex' that turns the capture templates into the lit one.
+
+Replaces `org-roam-capture-templates' with `orb-capture-templates' temporally.
+This lets us keep a single template in `orf-roam-capture-templates' so we don't
+have to pick a template each time."
+  (interactive)
+  (let ((org-roam-capture-templates orb-capture-templates))
+    (ivy-bibtex ARG LOCAL-BIB)))
 
 ;; Find and take notes on bibliographic entries, Seems to be an eager load right now
 (use-package! ivy-bibtex
@@ -479,7 +605,7 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
   )
   (map! :leader
         :prefix ("r" . "roam")
-        :desc "Get notes on a biblographic entry" "r" #'ivy-bibtex)
+        :desc "Get notes on a biblographic entry" "r" 'bl/ivy-bibtex)
   ;; Add an ivy action that inserts my version of cite lengths.
   ;; Access extra actions with C-o and then pick an option.
   (ivy-add-actions
@@ -506,47 +632,30 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
    )
    (defvar org-ref--bibliography-style "authordate1" "The org ref bibliography format, only works in LaTeX?")
    ;; Add a bibliography link to files that have cite links.
-   (add-hook! 'org-export-before-parsing-hook #'bl/org-ref--add-bibilography-link)
+   (add-hook! 'org-export-before-parsing-hook #'bl/org-ref--add-bibliography-link)
    ;; Make sure we don't byte complie this function (`#'), we need to read the
    ;; value of `default-directory' which might change.
-   (add-hook! 'org-export-before-parsing-hook 'bl/org-export--add-ref-note-links)
-   )
+   (add-hook! 'org-export-before-parsing-hook 'bl/org-export--add-ref-note-links))
 
-(use-package! yankpad
-  :config
-  (setq yankpad-file (concat doom-private-dir "yankpad.org"))
-  (map! :leader
-        :desc "Snippits with Yankpad"
-        "y" #'yankpad-insert))
-
-;; Virtually wrap lines at 80 characters.
-(use-package! visual-fill-column
-  :hook
-  (visual-line-mode . visual-fill-column-mode))
-
-(custom-set-faces!
-  '((org-block markdown-code-face) :background nil))
-
+;; TODO Unify options and menu for actions between Spc-r-r and RET on a cite link
 (use-package! org-roam-bibtex
   :after org-roam
   :hook (org-roam-mode . org-roam-bibtex-mode)
   :config
-  (setq org-roam-completion-everywhere 'nil)
   (setq orb-insert-interface 'ivy-bibtex)
   (setq orb-note-actions-interface 'ivy)
   (setq orb-preformat-keywords
-        '("citekey" "title" "url" "file" "author-or-editor" "keywords" "ref" "author-abbrev" "journal" "booktitle" "date" "year" "doi"))
-  (setq orb-templates
-        `(("r" "ref" plain (function org-roam-capture--get-point)
-           ""
-           :file-name "lit/${citekey}"
-           ;; :head "#+title: ${title}\n#+roam_key: cite:${citekey}\n#+startup: latexpreview\n\n:properties:\n:properties:\n:custom_id: ${citekey}\n:author: ${author-abbrev}\n:journal: ${journal}\n:booktitle: ${booktitle}\n:date: ${date}\n:year: ${year}\n:doi: ${doi}\n:url: ${url}\n:end:\n\n* Notes\n"
-           :head ,lit-note-template
-           :unnarrowed t
-           ))))
+        '("citekey" "title" "url" "file" "author-or-editor" "keywords" "ref"
+          "author-abbrev" "journal" "booktitle" "date" "year" "doi"))
+  (defvar orb-capture-templates `(("r" "bibliography note template" plain "%?"
+                                   :if-new (file+head "lit/${citekey}.org"
+                                                      ,lit-note-template)
+                                   :unnarrowed t)) "Capture when making a lit note")
+  )
 
-;; Speed up agenda over my roam files by only searching ones that are marked
-;; with a #+roam_tags: todo
+;; Several of the next functions are designed to speed up agenda/todo collection
+;; over my roam files by only searching ones that are marked with a
+;; `#+filetags: :todo:'
 (defun bl/todo-file-p ()
   "Return non-nil if the current buffer has any TODO entry."
   (org-element-map
@@ -557,22 +666,20 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
           'todo))
     nil 'first-match))
 
-(defun bl/roam-tags-update-todo (&optional marker)
-  "Update the TODO roam tag in a buffer. Adds a roam tag with the value of `marker'."
+(defun bl/org-tags-update-todo (&optional marker)
+  "Update the TODO filetags in a buffer. Adds a filetag with the value of `marker'."
   (unless marker (setq marker (car org-roam--todo-markers)))
   (when (and (not (active-minibuffer-window))
-             (org-roam--org-file-p buffer-file-name))
-    (let* ((file (buffer-file-name (buffer-base-buffer)))
-           ;; (all-tags (org-roam--extract-tags file))
-           (prop-tags (org-roam--extract-tags-prop file))
-           (tags prop-tags))
+             (org-roam-file-p buffer-file-name))
+    (save-excursion
+      ;; Jump to the start of the file so the marker is always added to filetags.
+      (goto-char (point-min))
       (if (bl/todo-file-p)
-          (setq tags (seq-uniq (cons marker tags)))
-        (setq tags (remove marker tags)))
-      (unless (equal prop-tags tags)
-        (org-roam--set-global-prop
-         "roam_tags"
-         (combine-and-quote-strings tags))))))
+          (org-roam-tag-add (list marker))
+        (condition-case err
+            (org-roam-tag-remove (list marker))
+          (error
+           (message "Failed to remove tag %s, no tag to remove" marker)))))))
 
 (defun bl/like-query (str)
   "Format a string into a like db query that checks if str is a substring."
@@ -583,9 +690,10 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
   (seq-map
    #'car ;; The db returns tuples for rows so grab the first item from each tuple.
    (org-roam-db-query
-    [:select file
-     :from tags
-     :where (like tags $r1)] (bl/like-query tag))))
+    [:select :distinct nodes:file
+     :from nodes
+     :left :outer :join tags :on (= tags:node-id nodes:id)
+     :where (like tags:tag $r1)] (bl/like-query tag))))
 
 (defun bl/find-roam-todo-agenda-files (&optional markers)
   "Return a list of org-roam files containing TODO entries."
@@ -597,50 +705,9 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
   (interactive)
   (setq org-agenda-files (bl/find-roam-todo-agenda-files)))
 
-(defun bl/org-roam--add-tag-string (str tags)
-  "Add TAGS to STR.
-
-Depending on the value of `org-roam-file-completion-tag-position', this function
-prepends TAGS to STR, appends TAGS to STR or omits TAGS from STR.
-
-Any tags in the list values of `org-roam-find-file--ignore-tags' will not be
-added to the string."
-  (interactive)
-  (let* ((tags (seq-remove (lambda (elt) (member elt org-roam-find-file--ignore-tags)) tags)))
-    (pcase org-roam-file-completion-tag-position
-      ('prepend (concat
-                 (when tags (propertize (format "(%s) " (s-join org-roam-tag-separator tags))
-                                        'face 'org-roam-tag))
-                 str))
-      ('append (concat
-                str
-                (when tags (propertize (format " (%s)" (s-join org-roam-tag-separator tags))
-                                       'face 'org-roam-tag))))
-      ('omit str))))
-
-;; It isn't a perfect match but use python highlighting when editing gin config files.
-(add-to-list 'auto-mode-alist '("\\.gin$" . python-mode))
-
-;; Keybinding for monthly and yearly agenda views.
-(map! :after evil-org-agenda
-      :map evil-org-agenda-mode-map
-      :m "y" 'org-agenda-year-view
-      :m "m" 'org-agenda-month-view)
-
-;; For fancy js-reveal presentations
-(use-package! ox-reveal
-  :after ox)
-
-(defun bl/org--add-css-header (backend)
-  "Add a CSS header to each org file as you export it"
-  (ignore backend)
-  (goto-char (point-min))
-  (pcase-let* ((`(,beg . ,end) (org-get-property-block))
-               (offset (if end end 0)))
-    (goto-char offset)
-    (newline)
-    (insert (format "#+html_head: <link rel=\"stylesheet\" type=\"text/css\" href=\"%s\"/>\n" org--css-location))))
-
+;; Several of the next functions are used to recursively export files and follow
+;; their links. Results in the export of a connected component in the graph. Use
+;; a cache of exported files to avoid infinite loops.
 (defun bl/org--link-info (link)
   "Parse a link into a property list."
   (let ((link-path (org-element-property :path link))
@@ -671,25 +738,56 @@ of the link in the buffer."
   (let* ((cite-links (seq-remove (lambda (e) (not (equal (plist-get e :type) "cite"))) (bl/org--get-links-from-buffer))))
     (apply #'append (seq-map #'bl/org-ref--split-link cite-links))))
 
-(defun bl/org-ref--add-bibilography-link (backend)
+(defun bl/org-end-of-property-drawer (&optional point)
+  "Find the end of a property draw at `point'.
+
+This is the actual end of the drawer, not the body. It is safe to insert text
+at the returned point. I normally call `(newline)' before inserting."
+  (unless point (setq point (point)))
+  (pcase-let ((`(,beg . ,end) (org-get-property-block point)))
+    (ignore beg)
+    (if end
+        (+ end (length ":end:"))
+      point)))
+
+(defun bl/org-ref--add-bibliography-link (backend)
   "If cite links appear in an org file, add a bibliography link so it shows up in export.
 
-We need to parse the buffer for this because we don't have access to the filename."
+We need to parse the buffer for this because we don't have access to the filename.
+
+Adds and extra headline (and css it make it invisible) before the bibliography
+so it is not hidden by the final headline being private."
   (ignore backend)
   (when (bl/org-ref--get-cite-links-from-buffer)
-      (goto-char (point-max))
-      (insert (concat "bibliography:" (car org-ref-default-bibliography) "\n"))
-      (insert (concat "bibliographystyle:" org-ref--bibliography-style "\n"))))
+    (goto-char (bl/org-end-of-property-drawer (point-min)))
+    (newline)
+    ;; Add Extra CSS so that any h2 whose parent has the class BIBLIOGRAPHY is hidden.
+    (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY h2 {display: none;}</style>\n")
+    (goto-char (point-max))
+    ;; Add a new headline (which makes sure the bibliography is visible even if
+    ;; the last headline is private). Set the `HTML_CONTAINER_CLASS' property
+    ;; for this headling, this will cause the parent of the h2 tag (representing
+    ;; this headline) to have and extra class. We set this class to BIBLIOGRAPHY
+    ;; so the headline will be styled with display: none;
+    (insert "* \n:PROPERTIES:\n:HTML_CONTAINER_CLASS: BIBLIOGRAPHY\n:END:\n")
+    (insert (concat "bibliography:" (car org-ref-default-bibliography) "\n"))
+    (insert (concat "bibliographystyle:" org-ref--bibliography-style "\n"))))
 
 (defun org-html-export-to-html-filename (filename &optional async subtreep visible-only body-only ext-plist)
   "Export an org mode file to html via filename."
   (interactive)
+  ;; Create a temp buffer and dump the org contents into it.
   (with-temp-buffer
     (let* ((fullname (file-truename filename))
            (export-name (concat (file-name-sans-extension filename) ".html")))
       (message "Exporting: %s to %s" fullname export-name)
       (insert-file-contents fullname)
-      (goto-char (point-min))
+      (goto-char (bl/org-end-of-property-drawer (point-min)))
+      (newline)
+      ;; ox-html want the name of the buffer to turn it into a `.html' file, but
+      ;; the temp-buffer doesn't have a name. Instead we insert a org option to
+      ;; set the exported name directly in the buffer. ox-html will happily use
+      ;; this name without checking the buffer name or asking us for a name.
       (insert (format "#+EXPORT_FILE_NAME: %s\n" export-name))
       ;; Set the default-directory to the directory of the org-file filename for
       ;; this export call. Theses means that when our hook to add ref links
@@ -705,37 +803,163 @@ We need to parse the buffer for this because we don't have access to the filenam
            (message "%s filed to export" fullname)
            (message "%s" (error-message-string err))))))))
 
+(defun bl/org-roam--id-link-to-file (link)
+  "Convert a roam ID link into a file link."
+  (list :path (caar (org-roam-db-query [:select :distinct nodes:file
+                                        :from nodes
+                                        :where (= nodes:id $s1)] (plist-get link :path)))
+        :type "file"))
+
 (defun -org-html-export-to-html-filename-recursive (filename &optional async subtreep visible-only body-only ext-plist exported)
-  "Export an org file and all files it links too. Exported set is used to avoid circular exports."
+  "Export an org file and all the files it links too.
+
+Exports a connected component of your note graph via depth first search. Exported
+files are kept in a set to avoid circular exports.
+
+Returns a list where the `car' is the name of the resulting export for this file
+and the `cdr' is the set of files already exported."
   (interactive)
   (message "Exported already: %s" exported)
   (let ((fullname (file-truename filename))
         (exported-file 'nil))
+    ;; Only export if we have not exported in the past.
     (unless (member fullname exported)
+      ;; Add ourselves to the exported set.
       (push fullname exported)
       (message "Recursively exporting: %s" fullname async subtreep visible-only body-only ext-plist)
       ;; We read the file in again to find the links because it is was easy, this
       ;; should be updated to use the org roam db. We should also filter based on
       ;; some org tags.
       (let* ((links (bl/org-roam--get-outbound-links-with-notes-over-cites fullname))
+             ;; These are the translation of all outbound id links to files that need to be exported.
+             (id-links (seq-remove (lambda (l) (not (equal (plist-get l :type) "id"))) links))
+             (roam-links (delete-dups (seq-map 'bl/org-roam--id-link-to-file id-links)))
+             ;; These are any note links that were inferred from cite links and inserted as file links.
              (file-links (seq-remove (lambda (l) (not (equal (plist-get l :type) "file"))) links))
-             (org-links (seq-remove (lambda (l) (not (equal (file-name-extension (plist-get l :path)) "org"))) file-links)))
+             ;; This makes sure they are org files and not things like images.
+             (org-links (seq-remove (lambda (l) (not (equal (file-name-extension (plist-get l :path)) "org"))) file-links))
+             ;; Merge any files I need to follow.
+             (org-links (append roam-links org-links)))
+        (message "Roam id links to follow: %s" roam-links)
         (message "Org Links to follow: %s" org-links)
         (message "All file links: %s" file-links)
         (message "All links: %s" links)
         (dolist (org-link org-links)
+          ;; Recursively export each of the links. Save the returned set of files
+          ;; that have already been exported.
           (setq exported (nth 1 (-org-html-export-to-html-filename-recursive (plist-get org-link :path) async subtreep visible-only body-only ext-plist exported))))
+        ;; Export actually export our self.
         (setq exported-file (org-html-export-to-html-filename filename async subtreep visible-only body-only ext-plist))))
     (list exported-file exported)))
+
+(defun org-html-export-to-html-filename-recursive (filename &optional async subtreep visible-only body-only ext-plist)
+  "Wrapper around recursive export for cleaner interface."
+  (nth 0 (-org-html-export-to-html-filename-recursive filename async subtreep visible-only body-only ext-plist)))
+
+(defun org-html-export-to-html-recursive (&optional async subtreep visible-only body-only ext-plist)
+  "A wrapper around by function that converts from a buffer export to a filename based one.
+
+This is what we use to access it from the `org-export' menu (SPC m e h)."
+  (let ((filename (buffer-file-name)))
+    (org-html-export-to-html-filename-recursive filename async subtreep visible-only body-only ext-plist)))
+
+(defun bl/org-roam--build-index-file (filename &optional include-private dir-name)
+  "Create an index file linking to all notes.
+
+Save the index file to `${dir-name}{filename}'. If `inculde-private' is true links
+to private notes will be included.
+
+The index is sorted in Alphabetical order, with normal notes coming first and lit
+notes coming after."
+  (unless dir-name (setq dir-name org-roam-dictionary))
+  ;; Create a new file to insert into.
+  (with-temp-file (concat dir-name filename)
+    ;; Insert a title and the general notes headline.
+    (insert "#+title: Index\n")
+    (insert "* Notes\n")
+    ;; Get the files that have notes and all the nodes themselves, include the
+    ;; following information `id', `title', `level', `pos', and `file'.
+    (let ((notes (bl/org-roam--list-note-files include-private))
+          (nodes (if include-private
+                     (org-roam-db-query [:select :distinct [nodes:id nodes:title nodes:level nodes:pos nodes:file]
+                                         :from nodes])
+                   (org-roam-db-query [:select :distinct [nodes:id nodes:title nodes:level nodes:pos nodes:file]
+                                       :from nodes
+                                       :left :outer :join tags :on (= nodes:id tags:node-id)
+                                       :where (or (is tags:tag 'nil)
+                                                  (not-like tags:tag $r1))]
+                                      (bl/like-query org-roam--private-tag)))))
+        ;; We need to set the hash table :test to `equal' because we are using
+        ;; string keys and the default :test would check item identity instead
+        ;; of item value when given keys. So `gethash' would always return `nil'
+        (let ((file-to-node (make-hash-table :size (length notes) :test 'equal))
+              (title-to-file (make-hash-table :size (length notes) :test 'equal))
+              (titles)
+              (note-section 't))
+          ;; Build a mapping from file name to the nodes in the file
+          (dolist (node nodes)
+            ;; Destructure the node into parts for ease of use.
+            (pcase-let* ((`(,id ,title ,level ,pos ,file) node)
+                         ;; Get any nodes already associated with this file
+                         (value (gethash file file-to-node))
+                         ;; Add new file
+                         (with-node (append value (list (list :title title :id id :level level :pos pos)))))
+              ;; Add to hash table
+              (puthash file with-node file-to-node)
+              ;; `level=0' implies the node is the top-level filenode so its
+              ;; title is the title of the file, save that and build a list of
+              ;; titles.
+              (when (= level 0)
+                (puthash title file title-to-file)
+                (setq titles (append titles (list title))))))
+          (dolist (title (sort (sort titles #'string>) ;; Sort title alphabetically
+                         ;; Sort titles so lit files come after the normal nodes.
+                         (lambda (a b)
+                           "Return t if a should sort before b"
+                           (let ((lit-a (string-match-p "lit/" (gethash a title-to-file)))
+                                 (lit-b (string-match-p "lit/" (gethash b title-to-file))))
+                             (cond
+                              ((and lit-a lit-b) 't)
+                              ((and (not lit-a) (not lit-b)) 't)
+                              ((and (not lit-a) lit-b) 't)
+                              ((and lit-a (not lit-b)) 'nil))))))
+            (let ((file (gethash title title-to-file)))
+              ;; When we hit the first lit note, add a lit header. We check if
+              ;; we are still in the note section to short circuit and not have
+              ;; to check file strings.
+              (if (and note-section (string-match-p "lit/" file))
+                  (progn
+                    (insert "* Lit\n")
+                    (setq note-section 'nil)))
+              ;; Sort nodes based on their position in the file, so we always
+              ;; have the links in the same order as they appear in the file.
+              (dolist (node (sort (gethash file file-to-node)
+                                  (lambda (a b) (if (< (plist-get a :pos) (plist-get b :pos))
+                                                    't
+                                                  'nil)))) ;; sort by :pos
+                ;; Add a link to the node.
+                (insert (format "%s [[id:%s][%s]]\n"
+                                ;; Set the heading to 2 + the level. The level
+                                ;; starts at `0' so add 1 so that everything has
+                                ;; at least one header, and add another to
+                                ;; account for the `Note' and `Lit' headers we
+                                ;; already have as top-level headers.
+                                (make-string (+ (plist-get node :level) 2) ?*)
+                                (plist-get node :id)
+                                (plist-get node :title))))))))))
 
 (defun bl/org-export--all-notes (&optional include-private)
   "Export all notes to html.
 
 If &optional `include-private' is non-nil, include notes marked with a 'private'
-tag. The value for the private tag is defined by `org-roam--private-tag'."
+tag. The value for the private tag is defined by `org-roam--private-tag'.
+
+Creates and exports an `index.html' that has links to all the nodes. Note: the
+created index.org is removed so it doesn't accidentally become an org-roam node
+and mess things up."
   (interactive)
   (let ((exported '())
-        (notes (bl/org-roam--list-notes include-private)))
+        (notes (bl/org-roam--list-note-files include-private)))
     (dolist (note notes)
       ;; Don't re-export things.
       (unless (member note exported)
@@ -743,20 +967,25 @@ tag. The value for the private tag is defined by `org-roam--private-tag'."
         ;; recursive export expansion.
         (let* ((results (-org-html-export-to-html-filename-recursive note))
                (exported-files (nth 1 results)))
-          (setq exported (append exported exported-files)))))))
+          (setq exported (append exported exported-files)))))
+    (bl/org-roam--build-index-file "index.org" include-private org-roam-directory)
+    (let ((exported (org-html-export-to-html-filename (concat org-roam-directory "index.org"))))
+      (delete-file (concat org-roam-directory "index.org"))
+      exported)))
 
-(defun org-html-export-to-html-filename-recursive (filename &optional async subtreep visible-only body-only ext-plist)
-  "Wrapper around recursive export for cleaner interface."
-  (nth 0 (-org-html-export-to-html-filename-recursive filename async subtreep visible-only body-only ext-plist)))
+(defun bl/org-export--all-notes-and-open (&optional include-private)
+  "Export all notes to html and open the index file."
+  (interactive)
+  (org-open-file (bl/org-export--all-notes include-private)))
 
-(defun org-html-export-to-html-recursive (&optional async subtreep visible-only body-only ext-plist)
-  "A wrapper around by function that converts from a buffer export to a filename based one."
-  (let ((filename (buffer-file-name)))
-    (org-html-export-to-html-filename-recursive filename async subtreep visible-only body-only ext-plist)))
-
+;; The next few functions are about munging cite links to create and add links
+;; to their actual notes during export.
 (defun bl/org-roam--get-notes-from-ref (ref)
   "Find the note file associated with `ref' return nil if notes do not exist."
-  (car (car (org-roam-db-query [:select file :from refs :where (= ref $s1)] ref))))
+  (caar (org-roam-db-query [:select :distinct nodes:file
+                            :from nodes
+                            :left :outer :join refs :on (= refs:node-id nodes:id)
+                            :where (= refs:ref $s1)] ref)))
 
 (defun bl/org-ref--make-note-link (note-loc &optional description superscript)
   "Turn a note location into insertable link text.
@@ -794,55 +1023,37 @@ locations."
           (insert note-link)
           (setq offset (+ offset (length note-link))))))))
 
-(defun bl/image-link-p (path)
-  "Check if a path most likely links to an image.
-
-Checks is the link is in a /images/ subdir or ends with a commong image file extension."
-  (if (or (not (null (string-match-p (regexp-quote "/images/") path)))
-          (seq-some (lambda (ext) (string-suffix-p ext path)) image-file-name-extensions))
-      't))
-
-(defun bl/org-export--export-images (backend)
-  "Copy any image that in linked in an exported file to the export images location."
-  (ignore backend)
-  (let* ((links (bl/org--get-links-from-buffer))
-         (image-links (seq-filter (lambda (l) (bl/image-link-p (plist-get l :path))) links))
-         ;; We only need to move image files, an image link to the web will work fine.
-         (file-image-links (seq-filter (lambda (l) (equal (plist-get l :type) "file")) image-links))
-         (image-locs (seq-map (lambda (l) (file-truename (plist-get l :path))) file-image-links))
-         (image-export-locs (seq-map (lambda (l) (concat org--export-directory (string-remove-prefix org-roam-directory l))) image-locs)))
-    (seq-mapn (lambda (src dst) (copy-file src dst 't)) image-locs image-export-locs)))
-
 (defun bl/org-roam--get-outbound-cite-links (filename)
   "Find all cite-links in a file by querying the org-roam db."
   (org-roam-db-update-file filename)
   (when-let* ((links (org-roam-db-query
-                      [:select :distinct dest
+                      [:select :distinct links:dest
                        :from links
-                       :where (and (= type "cite") (= source $s1))] filename))
+                       :left :outer :join nodes :on (= links:source nodes:id)
+                       :where (and (= links:type "cite")
+                                   (= nodes:file $s1))] filename))
               (links (seq-map (lambda (p) (list :path (car p) :type "cite")) links)))
-    (apply #'append (seq-map 'bl/org-ref--split-link links))
-    ))
+    (apply #'append (seq-map 'bl/org-ref--split-link links))))
 
-(defun bl/org-roam--list-notes (&optional include-private)
+(defun bl/org-roam--list-note-files (&optional include-private)
   "Get the names of all the notes in the zettelkasten
 
 If &optional `include-private' is non-nil, then fetch all notes, even ones with
 'private' tags. The value for the private tag is set with `org-roam--private-tag'
 
 Returns a list of note file names."
-  (org-roam-db-update)
   (let ((notes (if include-private
                    (org-roam-db-query [:select :distinct file :from files])
-                   (org-roam-db-query [:select :distinct files:file
-                                       :from files
-                                       :left :outer :join tags :on (= files:file tags:file)
-                                       :where (or (is tags:tags 'nil)
-                                                  (not-like tags:tags $r1))] (bl/like-query org-roam--private-tag)))))
+                 (org-roam-db-query [:select :distinct files:file
+                                     :from files
+                                     :left :outer :join nodes :on (= files:file nodes:file)
+                                     :left :outer :join tags :on (= nodes:id tags:node-id)
+                                     :where (or (is tags:tag 'nil)
+                                                (not-like tags:tag $r1))] (bl/like-query org-roam--private-tag)))))
     (seq-map 'car notes)))
 
 (defun bl/org-roam--get-outbound-links (filename &optional include-private)
-  "Find all cite-links in a file by querying the org-roam db.
+  "Find all links in a file by querying the org-roam db.
 
 If &optional `include-private' is non-nil, then fetch all notes, even ones with
 'private' tags. The value for the private tag is set with `org-roam--private-tag'
@@ -851,36 +1062,40 @@ Returns a list of link plists with attributes `:path' and `:type'
 "
   (org-roam-db-update-file filename) ;; Make sure DB information is up to date.
   (when-let* ((links (if include-private
-                         (org-roam-db-query [:select :distinct [dest type]
+                         (org-roam-db-query [:select :distinct [links:dest links:type]
                                              :from links
-                                             :where (= source $s1)] filename)
+                                             :left :outer :join nodes :on (= links:source nodes:id)
+                                             :where (= nodes:file $s1)] filename)
                        (org-roam-db-query [:select :distinct [links:dest links:type]
                                            :from links
-                                           ;; Join the with the tags table so get access to all the
-                                           ;; tags applied to the destination file of the link,
-                                           :left :outer :join tags :on (= links:dest tags:file)
-                                           :where (and
-                                                   ;; Only get outbound links from us.
-                                                   (= source $s1)
-                                                   ;; Only get links where the target has no tags or where it
-                                                   ;; doesn't have the private tag.
-                                                   (or (is tags:tags 'nil)
-                                                       (not-like tags:tags $r2)))] filename (bl/like-query org-roam--private-tag))))
+                                           :left :outer :join nodes :on (= links:source nodes:id)
+                                           :left :outer :join tags :on (= links:dest tags:node-id)
+                                           :where (and (= nodes:file $s1)
+                                                       (or (is tags:tag 'nil)
+                                                           (not-like tags:tag $r2)))] filename (bl/like-query org-roam--private-tag))))
+
               ;; Turn our link results into plists.
               (links (seq-map (lambda (l) (list :path (car l) :type (nth 1 l))) links)))
     ;; A cite link should never be private.
     ;; We split links in the form cite:paper1,paper2... into multiple links. We also wrap
     ;; non-cite-links in a list so they don't get pulled part in the apply #'append call.
-    (apply #'append (seq-map (lambda (l) (if (equal (plist-get l :type) "cite") (bl/org-ref--split-link l) (list l))) links))
-    ))
+    (apply #'append (seq-map (lambda (l) (if (equal (plist-get l :type) "cite") (bl/org-ref--split-link l) (list l))) links))))
 
+;; Works for V2
 (defun bl/org-roam--file-private-p (filename)
-  "Return t if the filename is a private file, 'nil otherwise."
+  "Return t if the filename is a private file, 'nil otherwise.
+
+Only files with a top level `filetags'=:private: are considered private files.
+A file with private nodes is still public."
   (org-roam-db-update-file filename) ;; Make sure DB information is up to date.
-  (let ((private (org-roam-db-query [:select file
-                                     :from tags
-                                     :where (and (= file $s1)
-                                                 (like tags $r2))] filename (bl/like-query org-roam--private-tag))))
+  (let ((private (org-roam-db-query [:select :distinct [nodes:id tags:tag]
+                                     :from nodes
+                                     :left :outer :join tags :on (= nodes:id tags:node-id)
+                                     :where (and
+                                             (= nodes:file $s1)
+                                             (like tags:tag $r2)
+                                             (= nodes:level 0))]
+                                    filename (bl/like-query org-roam--private-tag))))
     (if private
         't
       'nil)))
@@ -902,19 +1117,14 @@ Returns a list of file plists with `:path' and `:type' attributes.
         (if (equal type "cite")
             ;; If we are a cite link and there is a note for it, add that. (Omit
             ;; if the note is private).
-            (when-let ((note-loc (bl/org-roam--get-notes-from-ref path)))
-              (if (or include-private (not (bl/org-roam--file-private-p note-loc)))
-                (add-to-list 'result (list :path note-loc :type "file"))))
+            (let ((note-loc (bl/org-roam--get-notes-from-ref path)))
+              (if note-loc
+                  (if (or include-private (not (bl/org-roam--file-private-p note-loc)))
+                      (add-to-list 'result (list :path note-loc :type "file")))
+                (add-to-list 'result link)))
             ;; Add all other links.
           (add-to-list 'result link)))))
   result)
-
-(defun bl/create-parent-directories (path)
-  "Create partent directories for path is they don't already exist."
-  (unless (file-exists-p path)
-    (let ((dir (file-name-directory path)))
-      (unless (file-exists-p dir)
-        (make-directory dir 't)))))
 
 (defun bl/org-export--clear-export (&optional directory)
   "Clear out the export directory. Recreate it empty afterwards."
@@ -923,6 +1133,13 @@ Returns a list of file plists with `:path' and `:type' attributes.
   (if (file-exists-p directory)
       (if (y-or-n-p (format "Delete: '%s'?" directory))
           (delete-directory directory 't))))
+
+(defun bl/create-parent-directories (path)
+  "Create partent directories for path is they don't already exist."
+  (unless (file-exists-p path)
+    (let ((dir (file-name-directory path)))
+      (unless (file-exists-p dir)
+        (make-directory dir 't)))))
 
 (defun bl/org-roam--backup-notes (&optional directory)
   "Backup all my notes to a gzipped tarball.
@@ -999,3 +1216,4 @@ function to be run often, just when you are initializing a new computer.
 
 ;; (add-hook! 'org-export-before-parsing-hook :append 'bl/org-export--convert-top-level-properties-to-table)
 ;; (remove-hook! 'org-export-before-parsing-hook 'bl/org-export--convert-top-level-properties-to-table)
+;; TODO: Avoid links showing up if they link to something private.
