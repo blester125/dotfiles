@@ -7,6 +7,14 @@
 ;; sync' after modifying this file!
 (setq x-super-keysym 'meta) ;; Set the left super key to the meta, avoid alt clashes with i3
 (setq which-key-idle-delay 0.5) ;; Show me help quicker lol.
+;; Don't move the cursor backwards (vim behavior) when leaving insert mode. Should make things like inserting links much
+;; easier.
+(setq evil-move-cursor-back 'nil)
+
+;; Disable `describe-gnu-project' because it opens a web-browser, I never actually
+;; want to see it, and it takes forever.
+(map! :map doom-leader-map "h g" 'nil)
+(map! :map ehelp-map "g" 'nil)
 
 ;; Some functionality uses this to identify you, e.g. PGP configuration, email
 ;; clients, file templates and snippets.
@@ -122,7 +130,7 @@
   (setq ivy-use-virtual-buffers "recentf") ;; Have ivy include recently opened files in the switch buffer menu
   (setq ivy-wrap t) ;; When you select past the start or end of the completetion list wrap around
   ;; When using the ivy-minibuffer have shift-space just enter a space, it used to call a function that would wipe the buffer.
-  (define-key ivy-minibuffer-map (kbd "S-SPC") (lambda () (interactive) (insert " "))))
+  (map! :map ivy-minibuffer-map "S-SPC" (lambda () (interactive) (insert " "))))
 
 ;; Ignore the __pycache__ (as well as auto saves and backups) when searching for file
 (after! counsel
@@ -130,6 +138,43 @@
   (setq counsel-find-file-ignore-regexp "\\(?:^[#.]\\)\\|\\(?:[#~]$\\)\\|\\(?:^Icon?\\)\\|\\(?:__pycache__\\)")
   ;; Add our insert roam link from counsel-rg search.
   (ivy-add-actions 'counsel-rg '(("r" bl/ivy-insert-org-roam-link "Insert Org-Roam link."))))
+
+(defun bl/org-insert-downcased-property-drawer ()
+  "Downcase the :PROPERTIES: and :END: markers of a property drawer. To be used as advice after calling `org-insert-property-drawer'"
+  (let* ((drawer (org-get-property-block))
+         (beg (car drawer))
+         (end (cdr drawer)))
+    (downcase-region (- beg (length ":PROPERTIES:")) beg)
+    (downcase-region end (+ end (length ":END:")))))
+
+(defun bl/downcase-propertry-drawer (&optional beg force)
+  "Downcase all properties and end markers of a property drawer.
+
+If &optional `beg' is supplied, downcase the property drawer associated with this subtree/file.
+If &optinoal `force' is supplied, create the drawer if it does not exist."
+  (let* ((drawer (org-get-property-block beg force))
+         (beg (car drawer))
+         (end (cdr drawer))
+         (properties (org-entry-properties beg)))
+    (downcase-region (- beg (length ":PROPERTIES:")) beg)
+    (downcase-region end (+ end (length ":END:")))
+    (dolist (property (map-keys properties))
+      (goto-char beg)
+      (when (search-forward-regexp (format ":%s:" property) end 't 1)
+        (replace-match (format ":%s:" (downcase property)) 't)))))
+
+(defun bl/org-inherited-priority (header)
+  "Search parent headings to allow of inheritence of priority."
+  (cond
+   ;; Priority cookie in this heading
+   ((string-match org-priority-regexp header)
+    (* 1000 (- org-priority-lowest (org-priority-to-value (match-string 2 header)))))
+   ;; No priority cookite by we are a top level header
+   ((not (org-up-heading-safe))
+    (* 1000 (- org-priority-lowest org-priority-default)))
+   ;; Look for the parent's priority
+   (t
+    (bl/org-inherited-priority (org-get-heading)))))
 
 ;; Org mode is the reason I switched to emacs
 (after! org
@@ -139,7 +184,8 @@
         "c" #'org-capture) ;; Capture notes into org mode with SPC n c
   (map! :leader
         :prefix ("m" . "org-mode")
-        :desc "Open my global todo list" "T" #'org-todo-list)
+        :desc "Open my global todo list" "T" #'org-todo-list
+        :desc "Insert an empty property drawer" "O" (lambda () (interactive) (org-insert-property-drawer)))
   (setq org-src-fontify-natively 't)  ;; Use syntax highlighting for code blocks.
   ;; The available TODO states, the ones after the "|" are considered finished.
   (setq org-todo-keywords
@@ -160,12 +206,38 @@
                              (?D . chill)
                              (?E . success)))
   (setq org-priority-get-priority-function #'bl/org-inherited-priority)
+  (advice-add 'org-insert-property-drawer :after-while 'bl/org-insert-downcased-property-drawer)
   ;; Highlight the word NOWORK in org-agenda. It doesn't use font-lock so I had
   ;; to use a hook like this. Also I don't know why I couldn't use the DOOM
   ;; emacs add-hook! for this but it that case it wouldn't work.
   (add-hook 'org-agenda-finalize-hook
     (lambda ()
       (highlight-regexp "NOWORK" 'NOWORK-face))))
+
+(defun bl/org-html-section (fn &rest args)
+  "A wrapper around `org-html-section' to handle top-level processing."
+  (pcase-let* ((`(,section ,contents ,info) args)
+               (parent (org-export-get-parent-headline section)))
+    ;; no parent means we are the head of the file
+    (if (not parent)
+        (let ((tags (plist-get info :filetags)))
+          (if tags
+              (concat (org-html--tags tags info) contents)
+            contents))
+      ;; Any other section, just return the normal results.
+      (apply fn args))))
+
+(defun bl/org-html-paragraph (fn &rest args)
+  "Special processing for the paragraph inside the toplevel property drawer"
+  (pcase-let* ((`(,paragraph ,contents ,info) args)
+               (parent (org-export-get-parent paragraph))
+               (parent-type (org-element-type parent))
+               (headline (org-export-get-parent-headline paragraph)))
+    ;; TODO Add handling to remove the drawer if the only thing we have is `ID'?
+    (if (and (eq parent-type 'drawer)
+             (not headline))
+        (replace-regexp-in-string "^:" "" contents)
+      (apply fn args))))
 
 (use-package! ox
   :after org
@@ -186,8 +258,15 @@
   ;; default export directory (the same one the file is in) into the export
   ;; directory.
   (advice-add 'org-html-export-to-html :filter-return 'bl/org-export--move-output)
+  ;; Add function that handles exporting the top-level filetags
+  (advice-add 'org-html-section :around 'bl/org-html-section)
+  ;; Add a function that handles formatting the top-level properties drawer.
+  (advice-add 'org-html-paragraph :around 'bl/org-html-paragraph)
+  ;; Always use the property draw based export.
+  (advice-add 'org-html-drawer :override 'org-html-property-drawer)
   (setq org-export-with-toc 'nil)
   (setq org-html-htmlize-output-type 'css)
+  (setq org-html-head-include-default-style 'nil)
   (org-export-define-derived-backend 'html-roam 'html
     :menu-entry
     '(?h 2
@@ -542,19 +621,6 @@ added to the string."
 ;; It isn't a perfect match but use python highlighting when editing gin config files.
 (add-to-list 'auto-mode-alist '("\\.gin$" . python-mode))
 
-(defun bl/org-inherited-priority (header)
-  "Search parent headings to allow of inheritence of priority."
-  (cond
-   ;; Priority cookie in this heading
-   ((string-match org-priority-regexp header)
-    (* 1000 (- org-priority-lowest (org-priority-to-value (match-string 2 header)))))
-   ;; No priority cookite by we are a top level header
-   ((not (org-up-heading-safe))
-    (* 1000 (- org-priority-lowest org-priority-default)))
-   ;; Look for the parent's priority
-   (t
-    (bl/org-inherited-priority (org-get-heading)))))
-
 ;; Keybinding for monthly and yearly agenda views.
 (map! :after evil-org-agenda
       :map evil-org-agenda-mode-map
@@ -569,7 +635,11 @@ added to the string."
   "Add a CSS header to each org file as you export it"
   (ignore backend)
   (goto-char (point-min))
-  (insert (format "#+html_head: <link rel=\"stylesheet\" type=\"text/css\" href=\"%s\"/>\n" org--css-location)))
+  (pcase-let* ((`(,beg . ,end) (org-get-property-block))
+               (offset (if end end 0)))
+    (goto-char offset)
+    (newline)
+    (insert (format "#+html_head: <link rel=\"stylesheet\" type=\"text/css\" href=\"%s\"/>\n" org--css-location))))
 
 (defun bl/org--link-info (link)
   "Parse a link into a property list."
@@ -902,3 +972,30 @@ function to be run often, just when you are initializing a new computer.
     (make-directory (concat org--export-directory "images") 't))
   (unless (file-exists-p org-roam--backup-directory)
     (make-directory org-roam--backup-directory 't)))
+
+;; (defvar bl/org-export--skip-file-properties '("CATEGORY") "File level properties to skip")
+
+;; (defun bl/top-level-properties-to-table (&optional skip no-header WHICH)
+;;   (unless skip (setq skip bl/org-export--skip-file-properties))
+;;   (unless WHICH (setq WHICH 'standard))
+;;   (let* ((header (not no-header))
+;;          (properties (org-entry-properties (point-min) WHICH))
+;;          (properties (seq-remove (lambda (l) (member (car l) skip)) properties))
+;;          (properties (seq-map (lambda (l) (list (car l) (cdr l))) properties))
+;;          (properties (if header (append '(("File Properties" . "Values")) properties)
+;;                        properties))
+;;          (start (point)))
+;;     (dolist (property properties)
+;;       (insert (concat (string-join property "\t") "\n")))
+;;     (org-table-convert-region start (point))
+;;     (if header
+;;         (progn
+;;           (goto-char (org-table-begin))
+;;           (org-table-insert-hline)))))
+
+;; (defun bl/org-export--convert-top-level-properties-to-table (backend)
+;;   (ignore backend)
+;;   (bl/top-level-properties-to-table))
+
+;; (add-hook! 'org-export-before-parsing-hook :append 'bl/org-export--convert-top-level-properties-to-table)
+;; (remove-hook! 'org-export-before-parsing-hook 'bl/org-export--convert-top-level-properties-to-table)
