@@ -370,17 +370,25 @@ have to pick a template each time."
 (after! org-roam
   (org-roam-setup)
   (map! :leader
-        :prefix ("r" . "roam")
-        :desc "Open org-roam backlink panel" "l" #'org-roam-buffer-toggle
-        :desc "Insert a new org-roam link" "i" #'org-roam-node-insert
-        :desc "Insert a new org-roam link, create with template if missing" "I" (lambda () (interactive)(org-roam-node-insert 'nil :templates org-roam-capture-templates--immediate))
-        ;; :desc "Switch org-roam buffers" "b" #'org-roam-switch-to-buffer
-        :desc "Find an org-roam file, create if not found" "f" #'org-roam-node-find
-        :desc "Show the org-roam graph" "g" #'org-roam-graph
-        :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
-        :desc "Get notes on a biblographic entry" "r" 'bl/ivy-bibtex
-        :desc "Search notes" "s" 'bl/org-roam--counsel-rg
-        :desc "Convert Headline into a Node" "n" (lambda () (interactive) (org-id-get-create)(save-buffer)))
+        (:prefix ("r" . "roam")
+         :desc "Open org-roam backlink panel" "l" #'org-roam-buffer-toggle
+         :desc "Insert a new org-roam link" "i" #'org-roam-node-insert
+         :desc "Insert a new org-roam link, create with template if missing" "I" (lambda () (interactive)(org-roam-node-insert 'nil :templates org-roam-capture-templates--immediate))
+         ;; :desc "Switch org-roam buffers" "b" #'org-roam-switch-to-buffer
+         :desc "Find an org-roam file, create if not found" "f" #'org-roam-node-find
+         :desc "Show the org-roam graph" "g" #'org-roam-graph
+         :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
+         :desc "Get notes on a biblographic entry" "r" 'bl/ivy-bibtex
+         :desc "Search notes" "s" 'bl/org-roam--counsel-rg
+         :desc "Convert Headline into a Node" "n" (lambda () (interactive) (org-id-get-create)(save-buffer))
+         (:prefix ("a" . "add")
+          :desc "Add a tag to the node" "t" 'org-roam-tag-add
+          :desc "Add a ref to the node" "r" 'org-roam-ref-add
+          :desc "Add an alias to the node" "a" 'org-roam-alias-add)
+         (:prefix ("d" . "delete")
+          :desc "Remove a tag from the node" "t" 'org-roam-tag-remove
+          :desc "Remove a ref from the node" "r" 'org-roam-ref-remove
+          :desc "Remove an alias from the node" "a" 'org-roam-alias-remove)))
   ;; The default text that is populated in a new org-roam note. We define a single
   ;; template so we don't have to select between them.
   (setq org-roam-capture-templates
