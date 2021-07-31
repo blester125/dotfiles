@@ -237,7 +237,7 @@ If &optinoal `force' is supplied, create the drawer if it does not exist."
   (add-hook! 'org-export-before-parsing-hook #'bl/org--add-css-header)
   ;; The directory where exports will live so they aren't littered around our
   ;; zettelkasten.
-  (defvar org--export-directory (concat org-roam-directory "export/") "Where exported org mode files will appear.")
+  (defvar org--export-directory (concat notes "export/") "Where exported org mode files will appear.")
   ;; Use hook to make sure any image files that are linked to are copied over
   ;; into the export directory.
   (add-hook! 'org-export-before-parsing-hook 'bl/org-export--export-images) ;; Don't bite compile because we check variables.
@@ -292,6 +292,7 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
     (make-directory export-dir))
   (let ((dest (concat export-dir (string-remove-prefix base-dir filename))))
     (message "Moving exported file from %s to %s" filename dest)
+    (bl/create-parent-directories dest)
     (rename-file filename dest 't)
     dest))
 
@@ -312,7 +313,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
          (file-image-links (seq-filter (lambda (l) (equal (plist-get l :type) "file")) image-links))
          (image-locs (seq-map (lambda (l) (file-truename (plist-get l :path))) file-image-links))
          (image-export-locs (seq-map (lambda (l) (concat org--export-directory (string-remove-prefix org-roam-directory l))) image-locs)))
-    (seq-mapn (lambda (src dst) (copy-file src dst 't)) image-locs image-export-locs)))
+    (seq-mapn (lambda (src dst) (bl/create-parent-directories dst) (copy-file src dst 't)) image-locs image-export-locs)))
 
 (defun bl/org--add-css-header (backend)
   "Add a CSS header to each org file as you export it"
@@ -354,6 +355,17 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
 (font-lock-add-keywords 'org-mode
                         '(("NOWORK" . 'NOWORK-face)))
 
+(defun bl/ivy-bibtex (&optional ARG LOCAL-BIB)
+  "Wrapper around `ivy-bibtex' that turns the capture templates into the lit one.
+
+Replaces `org-roam-capture-templates' with `orb-capture-templates' temporally.
+This lets us keep a single template in `orf-roam-capture-templates' so we don't
+have to pick a template each time."
+  (interactive)
+  (let ((org-roam-capture-templates orb-capture-templates))
+    (ivy-bibtex ARG LOCAL-BIB)))
+
+
 ;; A Zettelkasten in org mode, the reason I switched
 (after! org-roam
   (org-roam-setup)
@@ -361,15 +373,14 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
         :prefix ("r" . "roam")
         :desc "Open org-roam backlink panel" "l" #'org-roam-buffer-toggle
         :desc "Insert a new org-roam link" "i" #'org-roam-node-insert
-        ;; TODO Once supported have a no, input template.
-        ;; :desc "Insert a new org-roam link, create with template if missing" "I" #'org-roam-insert-immediate
+        :desc "Insert a new org-roam link, create with template if missing" "I" (lambda () (interactive)(org-roam-node-insert 'nil :templates org-roam-capture-templates--immediate))
         ;; :desc "Switch org-roam buffers" "b" #'org-roam-switch-to-buffer
         :desc "Find an org-roam file, create if not found" "f" #'org-roam-node-find
         :desc "Show the org-roam graph" "g" #'org-roam-graph
         :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
-        :desc "Open the current journal" "j" #'bl/org-journal-find-location
         :desc "Get notes on a biblographic entry" "r" 'bl/ivy-bibtex
-        :desc "Search notes" "s" 'bl/org-roam--counsel-rg)
+        :desc "Search notes" "s" 'bl/org-roam--counsel-rg
+        :desc "Convert Headline into a Node" "n" (lambda () (interactive) (org-id-get-create)(save-buffer)))
   ;; The default text that is populated in a new org-roam note. We define a single
   ;; template so we don't have to select between them.
   (setq org-roam-capture-templates
@@ -377,6 +388,11 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
            :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
                               "#+title: ${title}\n#+startup: latexpreview\n\n")
            :unnarrowed t)))
+  (defvar org-roam-capture-templates--immediate
+        '(("d" "default" plain "%?"
+           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                              "#+title: ${title}\n#+startup: latexpreview\n\nBUTTS")
+           :immediate-finish 't)) "A Capture template to use when auto inserting.")
   ;; A method that counts the number of backlinks a node has. Need to be defined
   ;; after org-roam is loaded to have access to this `org-roam-node' thing.
   (cl-defmethod org-roam-node-backlinkscount ((node org-roam-node))
@@ -414,7 +430,27 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
   (advice-add 'org-agenda :before #'bl/update-agenda-files)
   (advice-add 'org-todo-list :before #'bl/update-agenda-files)
   ;; Use my custom function which removes some tags (like TODO) when searching for nodes.
-  (advice-add 'org-roam-node-doom-tags :filter-return 'bl/org-roam-node-doom-tags))
+  (advice-add 'org-roam-node-doom-tags :filter-return 'bl/org-roam-node-doom-tags)
+  (setq org-roam-dailies-directory "journal/")
+  (setq org-roam-dailies-capture-templates
+        '(("d" "default" entry
+           "* %<%H:%M> %^{title}\n%i%?"
+           :if-new (file+head "%<%Y-%m-%d>.org"
+                              "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview\n"))))
+  (map! :leader
+        :prefix ("j" . "journal")
+        :desc "Capture a new entry for today's note" "c" 'org-roam-dailies-capture-today
+        :desc "Open the note for today" "j" 'org-roam-dailies-goto-today
+        :desc "Move to the previous note" "h" 'org-roam-dailies-goto-previous-note
+        :desc "Move to the next note" "l" 'org-roam-dailies-goto-next-note
+        :desc "Search in the journal" "s" 'bl/org-roam-dailies--counsel-rg
+        :desc "Capture a new entry for the note at `date'" "d" 'org-roam-dailies-capture-date
+        :desc "Open the note for `date'" "D" 'org-roam-dailies-goto-date
+        :desc "Capture a new entry for yesterday's note" "y" 'org-roam-dailies-capture-yesterday
+        :desc "Open the note for yesterday" "Y" 'org-roam-dailies-goto-yesterday
+        :desc "Capture a new entry for tomorrow's note" "t" 'org-roam-dailies-capture-tomorrow
+        :desc "Open the note for tomorrow" "T" 'org-roam-dailies-goto-tomorrow)
+  )
 
 (defun bl/org-roam-node-doom-tags (tags)
   "Remove ignored tags from the roam search formatting.
@@ -434,6 +470,14 @@ Applies the `shadow' face as a property, like the default doom-tags does."
   ;; Note: It uses smart casing search. This means when your search uses lowercase
   ;; it is case-insensitive, but adding an upper case makes it case-sensative
   (counsel-rg INITIAL-INPUT org-roam-directory "--type org" "org-roam search: "))
+
+(defun bl/org-roam-dailies--counsel-rg (&optional INITIAL-INPUT)
+  "Full text search with counsel-rg (using ripgrep) specific to searching my journal."
+  (interactive)
+  ;; Only search org files in the zettelkasten. We also set the prompt to be more informative.
+  ;; Note: It uses smart casing search. This means when your search uses lowercase
+  ;; it is case-insensitive, but adding an upper case makes it case-sensative
+  (counsel-rg INITIAL-INPUT (expand-file-name org-roam-dailies-directory org-roam-directory) "--type org" "org-roam-journal search: "))
 
 (defun bl/ivy-insert-org-roam-link (candidate)
   "Insert an org-roam link based on the selected file from search.
@@ -475,79 +519,6 @@ top-level is there are none in the file."
                  (title (org-roam-node-title node)))
       ;; Create and insert a id link.
       (insert (format "[[id:%s][%s]]" id title)))))
-
-;; TODO(brianlester): Right now this will open the multiple windows where you
-;; can see a preview of the journal file being changed. I would like to remove
-;; that in the future
-(defun bl/org-journal-find-location (&optional search)
-  (interactive)
-  (let ((search (or search "^\*[^*]*$")))
-    ;; Open today's journal, but specify a non-nil prefix argument in order to
-    ;; inhibit inserting the heading; org-capture will insert the heading.
-    (org-journal-new-entry t)
-    ;; Position point on the journal's last top-level heading so that
-    ;; org-capture will add the new entry as a child entry. First we go to the
-    ;; end of the file with point-max
-    (goto-char (point-max))
-    ;; then we search backwards for the first line that has a match of starting
-    ;; with a single *, the second character block say one of more anything but
-    ;; a * this will eliminate find a sub heading. This is based on the
-    ;; assumption that each day has a heading and all the notes you will capture
-    ;; on that day should be sub headings of that day.
-    (search-backward-regexp search)
-    ;; The version of this function I found on the internet used `point-min' to
-    ;; jump to the beginning of the file which assumed that the first heading
-    ;; lived there. That is fine for some daily notes but when you use
-    ;; org-capture for weekly/monthly it breaks. It also breaks if you have a
-    ;; header in the file.
-  ))
-
-(defun work/org-journal-find-location ()
-  "Find my monthly work journal."
-  (let ((org-journal-dir (bl/getenv "WORK_NOTEBOOK" "~/dev/work/notebooks/blester"))
-        (org-journal-file-format "%Y-%m.org")
-        (org-journal-file-type 'monthly))
-        (bl/org-journal-find-location))
-  )
-
-;; TODO: When there is a header in the file the new entries don't next properly.
-(defun bl/org-journal-file-header-func (time)
-  "Custom function to create journal header."
-  (concat
-    (pcase org-journal-file-type
-      (`daily (concat "#+title: " (format-time-string org-journal-date-format time) "\n#+startup: showeverything\n\n"))
-      (`weekly "#+title: Weekly Journal\n#+startup: folded\n\n")
-      (`monthly (concat "#+title: " (format-time-string "%B" time) " Journal\n#+startup: folded\n\n"))
-      (`yearly "#+title: Yearly Journal\n#+startup: folded\n\n")))
-  )
-
-;; A daily journal in org model that I access via org-capture
-(use-package! org-journal
-  :after (org-capture org)
-  :config
-  (setq
-        ;; TODO should daily journals have their own dir? Will all the exporting
-        ;; work correctly?
-        org-journal-dir org-roam-directory
-        org-journal-file-format "%Y-%m-%d.org"
-        org-journal-date-format "%A, %d %B %Y"
-        org-journal-file-type 'daily
-        org-journal-file-header 'bl/org-journal-file-header-func
-        org-journal-find-file 'find-file
-        ;; Don't move things like TODO headlines forward in the journal, We can
-        ;; use the global todo list to find these and moving them forward could
-        ;; remove them from their context.
-        org-journal-carryover-items "")
-  (add-to-list 'org-capture-templates '("w" "Work entry" entry (function work/org-journal-find-location)
-                                      "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
-  (add-to-list 'org-capture-templates '("j" "Journal entry" entry (function bl/org-journal-find-location)
-                                      "* %(format-time-string org-journal-time-format)%^{Title}\n%i%?"))
-  (map! :leader
-        :prefix ("j" . "journal")
-        :desc "Previous Journal Entry" "h" #'org-journal-previous-entry
-        :desc "Next Journal Entry" "l" #'org-journal-next-entry
-        :desc "Plain Text Search in the Journal" "s" #'org-journal-search)
-)
 
 ;; Don't include template text when created a org file from scratch, it doesn't
 ;; happen often and there isn't a real need.
@@ -761,8 +732,10 @@ so it is not hidden by the final headline being private."
   (ignore backend)
   ;; Get the top level org-roam node and see if it has a :ROAM_REFS:
   (let* ((node (org-roam-node-at-point (point-min)))
+         ;; TODO Handle cases where there are multiple :ROAM_REFS:
          (ref (car (org-roam-node-refs node)))
-         (ref-lookup (org-ref-key-in-file-p ref (car org-ref-default-bibliography))))
+         ;; Make sure we don't try to check a key when there isn't a :ROAM_REFS:
+         (ref-lookup (when ref (org-ref-key-in-file-p ref (car org-ref-default-bibliography)))))
     ;; Add a bibliography if we have cite links in the buffer or if the
     ;; :ROAM_REF: is a cite-link
     (when (or ref-lookup (bl/org-ref--get-cite-links-from-buffer))
@@ -1197,37 +1170,14 @@ function to be run often, just when you are initializing a new computer.
     (make-directory zettelkasten 't))
   (unless (file-exists-p lit)
     (make-directory lit 't))
+  (unless (file-exists-p (concat org--export-directory org-roam-dailies-directory))
+    (make-directory (concat org--export-directory org-roam-dailies-directory)) 't)
   (unless (file-exists-p org--export-directory)
     (make-directory org--export-directory 't)
     (make-directory (concat org--export-directory "lit") 't)
     (make-directory (concat org--export-directory "images") 't))
+    (make-directory (concat org--export-directory org-roam-dailies-directory) 't)
   (unless (file-exists-p org-roam--backup-directory)
     (make-directory org-roam--backup-directory 't)))
 
-;; (defvar bl/org-export--skip-file-properties '("CATEGORY") "File level properties to skip")
-
-;; (defun bl/top-level-properties-to-table (&optional skip no-header WHICH)
-;;   (unless skip (setq skip bl/org-export--skip-file-properties))
-;;   (unless WHICH (setq WHICH 'standard))
-;;   (let* ((header (not no-header))
-;;          (properties (org-entry-properties (point-min) WHICH))
-;;          (properties (seq-remove (lambda (l) (member (car l) skip)) properties))
-;;          (properties (seq-map (lambda (l) (list (car l) (cdr l))) properties))
-;;          (properties (if header (append '(("File Properties" . "Values")) properties)
-;;                        properties))
-;;          (start (point)))
-;;     (dolist (property properties)
-;;       (insert (concat (string-join property "\t") "\n")))
-;;     (org-table-convert-region start (point))
-;;     (if header
-;;         (progn
-;;           (goto-char (org-table-begin))
-;;           (org-table-insert-hline)))))
-
-;; (defun bl/org-export--convert-top-level-properties-to-table (backend)
-;;   (ignore backend)
-;;   (bl/top-level-properties-to-table))
-
-;; (add-hook! 'org-export-before-parsing-hook :append 'bl/org-export--convert-top-level-properties-to-table)
-;; (remove-hook! 'org-export-before-parsing-hook 'bl/org-export--convert-top-level-properties-to-table)
 ;; TODO: Avoid links showing up if they link to something private.

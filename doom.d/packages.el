@@ -51,7 +51,6 @@
 (when WORK (load (concat doom-private-dir "work-packages.el")))
 
 (package! flyspell)
-(package! org-journal)
 (package! evil-commentary)
 (package! org-ref)
 (package! ivy-bibtex)
