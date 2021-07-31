@@ -157,6 +157,7 @@
 
 If &optional `beg' is supplied, downcase the property drawer associated with this subtree/file.
 If &optinoal `force' is supplied, create the drawer if it does not exist."
+  (interactive)
   (let* ((drawer (org-get-property-block beg force))
          (beg (car drawer))
          (end (cdr drawer))
@@ -367,7 +368,8 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
         :desc "Show the org-roam graph" "g" #'org-roam-graph
         :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
         :desc "Open the current journal" "j" #'bl/org-journal-find-location
-        :desc "Search notes" "s" #'bl/org-roam--counsel-rg)
+        :desc "Get notes on a biblographic entry" "r" 'bl/ivy-bibtex
+        :desc "Search notes" "s" 'bl/org-roam--counsel-rg)
   ;; The default text that is populated in a new org-roam note. We define a single
   ;; template so we don't have to select between them.
   (setq org-roam-capture-templates
@@ -431,7 +433,7 @@ Applies the `shadow' face as a property, like the default doom-tags does."
   ;; Only search org files in the zettelkasten. We also set the prompt to be more informative.
   ;; Note: It uses smart casing search. This means when your search uses lowercase
   ;; it is case-insensitive, but adding an upper case makes it case-sensative
-  (counsel-rg INITIAL-INPUT org-roam-directory "--glob **/*.org" "org-roam search: "))
+  (counsel-rg INITIAL-INPUT org-roam-directory "--type org" "org-roam search: "))
 
 (defun bl/ivy-insert-org-roam-link (candidate)
   "Insert an org-roam link based on the selected file from search.
@@ -564,16 +566,16 @@ top-level is there are none in the file."
   '((org-block markdown-code-face) :background nil))
 
 (defvar lit-note-template (concat ":properties:\n"
-                                ":author: ${author-abbrev}\n"
-                                ":journal: ${journal}\n"
-                                ":booktitle: ${booktitle}\n"
-                                ":date: ${date}\n"
-                                ":year: ${year}\n"
-                                ":doi: ${doi}\n"
-                                ":url: ${url}\n"
-                                ":end:\n"
-                                "#+title: ${title}\n"
-                                "#+setup: latexpreview\n")
+                                  ":author: ${author-abbrev}\n"
+                                  ":journal: ${journal}\n"
+                                  ":booktitle: ${booktitle}\n"
+                                  ":date: ${date}\n"
+                                  ":year: ${year}\n"
+                                  ":doi: ${doi}\n"
+                                  ":url: ${url}\n"
+                                  ":end:\n"
+                                  "#+title: ${title}\n"
+                                  "#+setup: latexpreview\n")
 "The template for creating a new Litature Note.")
 
 (defun bl/ivy-bibtex (&optional ARG LOCAL-BIB)
@@ -603,9 +605,6 @@ have to pick a template each time."
    ivy-bibtex-default-action 'ivy-bibtex-insert-cite-key
    bibtex-completion-notes-template-multiple-files lit-note-template
   )
-  (map! :leader
-        :prefix ("r" . "roam")
-        :desc "Get notes on a biblographic entry" "r" 'bl/ivy-bibtex)
   ;; Add an ivy action that inserts my version of cite lengths.
   ;; Access extra actions with C-o and then pick an option.
   (ivy-add-actions
@@ -640,6 +639,8 @@ have to pick a template each time."
 ;; TODO Unify options and menu for actions between Spc-r-r and RET on a cite link
 (use-package! org-roam-bibtex
   :after org-roam
+  ;; Load when we hit SPC r r
+  :after-call bl/ivy-bibtex
   :hook (org-roam-mode . org-roam-bibtex-mode)
   :config
   (setq orb-insert-interface 'ivy-bibtex)
@@ -758,20 +759,33 @@ We need to parse the buffer for this because we don't have access to the filenam
 Adds and extra headline (and css it make it invisible) before the bibliography
 so it is not hidden by the final headline being private."
   (ignore backend)
-  (when (bl/org-ref--get-cite-links-from-buffer)
-    (goto-char (bl/org-end-of-property-drawer (point-min)))
-    (newline)
-    ;; Add Extra CSS so that any h2 whose parent has the class BIBLIOGRAPHY is hidden.
-    (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY h2 {display: none;}</style>\n")
-    (goto-char (point-max))
-    ;; Add a new headline (which makes sure the bibliography is visible even if
-    ;; the last headline is private). Set the `HTML_CONTAINER_CLASS' property
-    ;; for this headling, this will cause the parent of the h2 tag (representing
-    ;; this headline) to have and extra class. We set this class to BIBLIOGRAPHY
-    ;; so the headline will be styled with display: none;
-    (insert "* \n:PROPERTIES:\n:HTML_CONTAINER_CLASS: BIBLIOGRAPHY\n:END:\n")
-    (insert (concat "bibliography:" (car org-ref-default-bibliography) "\n"))
-    (insert (concat "bibliographystyle:" org-ref--bibliography-style "\n"))))
+  ;; Get the top level org-roam node and see if it has a :ROAM_REFS:
+  (let* ((node (org-roam-node-at-point (point-min)))
+         (ref (car (org-roam-node-refs node)))
+         (ref-lookup (org-ref-key-in-file-p ref (car org-ref-default-bibliography))))
+    ;; Add a bibliography if we have cite links in the buffer or if the
+    ;; :ROAM_REF: is a cite-link
+    (when (or ref-lookup (bl/org-ref--get-cite-links-from-buffer))
+      (goto-char (bl/org-end-of-property-drawer (point-min)))
+      (newline)
+      ;; Add Extra CSS so that any h2 whose parent has the class BIBLIOGRAPHY is hidden.
+      (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY h2 {display: none;} {display: none;}</style>\n")
+      ;; Add Extra CSS for a hidden cite link to this current paper.
+      (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY a.org-ref-reference {display: none;}</style>\n")
+      (goto-char (point-max))
+      ;; Add a new headline (which makes sure the bibliography is visible even if
+      ;; the last headline is private). Set the `HTML_CONTAINER_CLASS' property
+      ;; for this headling, this will cause the parent of the h2 tag (representing
+      ;; this headline) to have and extra class. We set this class to BIBLIOGRAPHY
+      ;; so the headline will be styled with display: none;
+      (insert "* \n:PROPERTIES:\n:HTML_CONTAINER_CLASS: BIBLIOGRAPHY\n:END:\n")
+      ;; If the :ROAM_REFS: is present, add a new secret citelink (which is
+      ;; hidden with CSS) for it. This will force the bibliography to contain a
+      ;; reference to this paper (that the note is on). It will also trigger a
+      ;; bibliography if there are no other citelinks on the page.
+      (if ref-lookup (insert (format "cite:%s\n" ref)))
+      (insert (concat "bibliography:" (car org-ref-default-bibliography) "\n"))
+      (insert (concat "bibliographystyle:" org-ref--bibliography-style "\n")))))
 
 (defun org-html-export-to-html-filename (filename &optional async subtreep visible-only body-only ext-plist)
   "Export an org mode file to html via filename."
