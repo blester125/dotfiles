@@ -301,7 +301,7 @@ structure in `base-dir'. If not specified it defaults to `org--export-directory'
   "Check if a path most likely links to an image.
 
 Checks is the link is in a /images/ subdir or ends with a commong image file extension."
-  (if (or (not (null (string-match-p (regexp-quote "/images/") path)))
+  (if (or (not (null (string-match-p (regexp-quote "images/") path)))
           (seq-some (lambda (ext) (string-suffix-p ext path)) image-file-name-extensions))
       't))
 
@@ -381,6 +381,7 @@ have to pick a template each time."
   (setq-default org-download-image-dir images)
   (setq org-download-timestamp "%Y%m%d-%H%M%S_")
   (setq org-download-image-org-width 300)
+  (setq org-download-image-html-width 500)
   (map! :leader
         (:prefix ("m" . "org-mode")
          (:prefix ("v" . "Paste Images")
