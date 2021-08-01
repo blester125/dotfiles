@@ -321,7 +321,13 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
   (ignore backend)
   (goto-char (bl/org-end-of-property-drawer (point-min)))
   (newline)
-  (insert (format "#+html_head: <link rel=\"stylesheet\" type=\"text/css\" href=\"%s\"/>\n" org--css-location)))
+  (insert (format "#+html_head: <link rel=\"stylesheet\" type=\"text/css\" href=\"%s\"/>\n" org--css-location))
+  ;; When we moved to org-roam v2, a lot more things have ids and some things that
+  ;; normally are turned into a `<figure>' tag are now a div with `class=figure'.
+  ;; The CSS i got off the internet isn't setup to handle that. Patch it for now
+  ;; to center figures on export, but look into writing own CSS soon. Need a
+  ;; better background color, or maybe use dark mode?
+  (insert (format "#+html_head: <style>.figure p {text-align: center;}</style>")))
 
 (defun bl/org-inherited-priority (header)
   "Search parent headings to allow of inheritence of priority."
