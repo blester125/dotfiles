@@ -25,6 +25,7 @@
 (defvar zettelkasten (concat notes "zettelkasten/") "Where I keep all of my notes.")
 (defvar lit (concat zettelkasten "lit/") "Where notes on papers (or anything with a bib reference) live.")
 (defvar bib (concat lit "references.bib") "Where I keep my large bibliography, in BibTex.")
+(defvar images (concat zettelkasten "images/") "Where I keep images from my notes.")
 
 (setq org-directory notes  ;; Where my general org notes are
       org-roam-directory zettelkasten ;; Where org-roam keeps all my files
@@ -365,6 +366,20 @@ have to pick a template each time."
   (let ((org-roam-capture-templates orb-capture-templates))
     (ivy-bibtex ARG LOCAL-BIB)))
 
+;; This package lets us drag images into emacs where they are inserted at point
+;; (where you left your cursor, not where you drag it to). It also supports
+;; getting images from a screen shot or you clipboard.
+(use-package! org-download
+  :after org
+  :config
+  (setq-default org-download-image-dir images)
+  (setq org-download-timestamp "%Y%m%d-%H%M%S_")
+  (setq org-download-image-org-width 300)
+  (map! :leader
+        (:prefix ("m" . "org-mode")
+         (:prefix ("v" . "Paste Images")
+          :desc "Insert image from screenshot" "s" 'org-download-screenshot
+          :desc "Insert image from clipboard" "c" 'org-download-clipboard))))
 
 ;; A Zettelkasten in org mode, the reason I switched
 (after! org-roam
@@ -373,8 +388,9 @@ have to pick a template each time."
         (:prefix ("r" . "roam")
          :desc "Open org-roam backlink panel" "l" #'org-roam-buffer-toggle
          :desc "Insert a new org-roam link" "i" #'org-roam-node-insert
+         ;; Override the templates with my one that saves the capture without
+         ;; getting any human input.
          :desc "Insert a new org-roam link, create with template if missing" "I" (lambda () (interactive)(org-roam-node-insert 'nil :templates org-roam-capture-templates--immediate))
-         ;; :desc "Switch org-roam buffers" "b" #'org-roam-switch-to-buffer
          :desc "Find an org-roam file, create if not found" "f" #'org-roam-node-find
          :desc "Show the org-roam graph" "g" #'org-roam-graph
          :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
@@ -396,6 +412,8 @@ have to pick a template each time."
            :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
                               "#+title: ${title}\n#+startup: latexpreview\n\n")
            :unnarrowed t)))
+  ;; A version of my org-node template that doesn't collect information, it just
+  ;; creates the result right away.
   (defvar org-roam-capture-templates--immediate
         '(("d" "default" plain "%?"
            :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
@@ -443,8 +461,13 @@ have to pick a template each time."
   (setq org-roam-dailies-capture-templates
         '(("d" "default" entry
            "* %<%H:%M> %^{title}\n%i%?"
-           :if-new (file+head "%<%Y-%m-%d>.org"
-                              "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview\n"))))
+           ;; By setting `olp' (OutLine Path) we can have all entries be
+           ;; inserted after that path. This lets us keep a top level header and
+           ;; have journal entries be second level, which is consistent with old
+           ;; notes, and just nicer to look at.
+           :if-new (file+head+olp "%<%Y-%m-%d>.org"
+                                  "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview\n"
+                                  ("Journal")))))
   (map! :leader
         :prefix ("j" . "journal")
         :desc "Capture a new entry for today's note" "c" 'org-roam-dailies-capture-today

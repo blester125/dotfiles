@@ -64,3 +64,6 @@
 (package! visual-fill-column)
 (package! ox-reveal)
 (package! yankpad)
+;; Configure org-download manually because I was having trouble getting it to work
+;; with the doom-emacs defaults.
+(package! org-download)
