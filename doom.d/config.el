@@ -410,14 +410,14 @@ have to pick a template each time."
   (setq org-roam-capture-templates
         '(("d" "default" plain "%?"
            :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
-                              "#+title: ${title}\n#+startup: latexpreview\n\n")
+                              "#+title: ${title}\n#+startup: latexpreview inlineimages\n\n")
            :unnarrowed t)))
   ;; A version of my org-node template that doesn't collect information, it just
   ;; creates the result right away.
   (defvar org-roam-capture-templates--immediate
         '(("d" "default" plain "%?"
            :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
-                              "#+title: ${title}\n#+startup: latexpreview\n\nBUTTS")
+                              "#+title: ${title}\n#+startup: latexpreview inlineimages\n\n")
            :immediate-finish 't)) "A Capture template to use when auto inserting.")
   ;; A method that counts the number of backlinks a node has. Need to be defined
   ;; after org-roam is loaded to have access to this `org-roam-node' thing.
@@ -466,7 +466,7 @@ have to pick a template each time."
            ;; have journal entries be second level, which is consistent with old
            ;; notes, and just nicer to look at.
            :if-new (file+head+olp "%<%Y-%m-%d>.org"
-                                  "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview\n"
+                                  "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview inlineimages\n"
                                   ("Journal")))))
   (map! :leader
         :prefix ("j" . "journal")
@@ -577,7 +577,7 @@ top-level is there are none in the file."
                                   ":url: ${url}\n"
                                   ":end:\n"
                                   "#+title: ${title}\n"
-                                  "#+setup: latexpreview\n")
+                                  "#+setup: latexpreview inlineimages\n")
 "The template for creating a new Litature Note.")
 
 (defun bl/ivy-bibtex (&optional ARG LOCAL-BIB)
