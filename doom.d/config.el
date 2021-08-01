@@ -379,7 +379,7 @@ have to pick a template each time."
   :after org
   :config
   (setq-default org-download-image-dir images)
-  (setq org-download-timestamp "%Y%m%d-%H%M%S_")
+  (setq org-download-timestamp "%Y%m%d%H%M%S-")
   (setq org-download-image-org-width 300)
   (setq org-download-image-html-width 500)
   (map! :leader
