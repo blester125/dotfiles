@@ -16,6 +16,11 @@
 (map! :map doom-leader-map "h g" 'nil)
 (map! :map ehelp-map "g" 'nil)
 
+(map! :leader
+      :prefix ("i" . "insert")
+      :n :desc "Insert an em-dash (—)" "m" (lambda () (interactive)(insert-char #x002014))
+      :n :desc "Insert a shrug (¯\\_(ツ)_/¯)" "S" (lambda () (interactive) (insert "¯\\_(ツ)_/¯")))
+
 ;; Some functionality uses this to identify you, e.g. PGP configuration, email
 ;; clients, file templates and snippets.
 (setq user-full-name "Brian Lester"
@@ -128,7 +133,8 @@
   (setq evil-vsplit-window-right t  ;; Open vertical splits to the right of the current window.
         evil-split-window-below t)  ;; Open horizontal splits below the current window.
   ;; Use evil commentary so things like commenting a visual selection work.
-  (evil-commentary-mode))
+  (evil-commentary-mode)
+  (map! :m "<end>" 'evil-end-of-line-or-visual-line))
 
 ;; Ivy the selection library via fuzzy matching I use
 (after! ivy
@@ -387,6 +393,17 @@ have to pick a template each time."
          (:prefix ("v" . "Paste Images")
           :desc "Insert image from screenshot" "s" 'org-download-screenshot
           :desc "Insert image from clipboard" "c" 'org-download-clipboard))))
+
+(use-package! org-fc
+  :after org
+  :config
+  (setq org-fc-directories `(,(concat zettelkasten "flash_cards")))
+  (map! :leader
+        (:prefix ("l" . "learning")
+         :desc "Review flash cards." "r" 'org-fc-review
+         (:prefix ("c" . "create")
+          :desc "Create a normal card." "n" 'org-fc-type-normal-init
+          :desc "Create a cloze card." "c" 'org-fc-type-cloze-init))))
 
 ;; A Zettelkasten in org mode, the reason I switched
 (after! org-roam
@@ -1219,3 +1236,32 @@ function to be run often, just when you are initializing a new computer.
     (make-directory org-roam--backup-directory 't)))
 
 ;; TODO: Avoid links showing up if they link to something private.
+
+(use-package! websocket
+  :after org-roam)
+
+(use-package! org-roam-ui
+  :after org-roam
+  :hook (org-roam . org-roam-ui-mode))
+
+; ===== Patch =====
+(defun bl/convert-dest-to-note (link)
+  (pcase-let* ((`(,source ,dest ,type) link)
+               (note (bl/org-roam--get-notes-from-ref dest)))
+    (if note
+        (let ((note-id (caar (org-roam-db-query [:select id
+                                                 :from nodes
+                                                 :where (= file $s1)] note))))
+          (list source note-id "id"))
+      link)))
+
+(defun org-roam-ui--send-graphdata ()
+  "Get roam data, make JSON, send through websocket to org-roam-ui."
+  (let* ((nodes-columns [id file title level])
+         (links-columns [source dest type])
+         (nodes-db-rows (org-roam-db-query `[:select ,nodes-columns :from nodes]))
+         (links-db-rows (org-roam-db-query `[:select ,links-columns :from links :where (or (= type "id") (= type "cite"))]))
+         (links-db-rows (seq-map 'bl/convert-dest-to-note links-db-rows))
+         (response `((nodes . ,(mapcar (apply-partially #'org-roam-ui-sql-to-alist (append nodes-columns nil)) nodes-db-rows))
+                                  (links . ,(mapcar (apply-partially #'org-roam-ui-sql-to-alist '(source target type)) links-db-rows)))))
+    (websocket-send-text oru-ws (json-encode `((type . "graphdata") (data . ,response))))))
