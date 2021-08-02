@@ -1247,9 +1247,4 @@ function to be run often, just when you are initializing a new computer.
   (setq org-roam-ui-sync-theme 't
         org-roam-ui-follow 't
         org-roam-ui-update-on-save 't
-        org-roam-ui-open-on-start 't)
-  (defun org-roam-ui--on-save ()
-    "Send graphdata on saving an org-roam buffer."
-    (when (org-roam-buffer-p)
-      (org-roam-ui--send-graphdata)
-      (org-roam-ui--update-current-node))))
+        org-roam-ui-open-on-start 't))
