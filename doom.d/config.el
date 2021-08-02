@@ -1242,26 +1242,26 @@ function to be run often, just when you are initializing a new computer.
 
 (use-package! org-roam-ui
   :after org-roam
-  :hook (org-roam . org-roam-ui-mode))
+  :hook (org-roam . org-roam-ui-mode)
+  :config
+  ;; ===== Patch =====
+  (defun bl/convert-dest-to-note (link)
+    (pcase-let* ((`(,source ,dest ,type) link)
+                 (note (bl/org-roam--get-notes-from-ref dest)))
+      (if note
+          (let ((note-id (caar (org-roam-db-query [:select id
+                                                   :from nodes
+                                                   :where (= file $s1)] note))))
+            (list source note-id "id"))
+        link)))
 
-; ===== Patch =====
-(defun bl/convert-dest-to-note (link)
-  (pcase-let* ((`(,source ,dest ,type) link)
-               (note (bl/org-roam--get-notes-from-ref dest)))
-    (if note
-        (let ((note-id (caar (org-roam-db-query [:select id
-                                                 :from nodes
-                                                 :where (= file $s1)] note))))
-          (list source note-id "id"))
-      link)))
-
-(defun org-roam-ui--send-graphdata ()
-  "Get roam data, make JSON, send through websocket to org-roam-ui."
-  (let* ((nodes-columns [id file title level])
-         (links-columns [source dest type])
-         (nodes-db-rows (org-roam-db-query `[:select ,nodes-columns :from nodes]))
-         (links-db-rows (org-roam-db-query `[:select ,links-columns :from links :where (or (= type "id") (= type "cite"))]))
-         (links-db-rows (seq-map 'bl/convert-dest-to-note links-db-rows))
-         (response `((nodes . ,(mapcar (apply-partially #'org-roam-ui-sql-to-alist (append nodes-columns nil)) nodes-db-rows))
-                                  (links . ,(mapcar (apply-partially #'org-roam-ui-sql-to-alist '(source target type)) links-db-rows)))))
-    (websocket-send-text oru-ws (json-encode `((type . "graphdata") (data . ,response))))))
+  (defun org-roam-ui--send-graphdata ()
+    "Get roam data, make JSON, send through websocket to org-roam-ui."
+    (let* ((nodes-columns [id file title level])
+           (links-columns [source dest type])
+           (nodes-db-rows (org-roam-db-query `[:select ,nodes-columns :from nodes]))
+           (links-db-rows (org-roam-db-query `[:select ,links-columns :from links :where (or (= type "id") (= type "cite"))]))
+           (links-db-rows (seq-map 'bl/convert-dest-to-note links-db-rows))
+           (response `((nodes . ,(mapcar (apply-partially #'org-roam-ui-sql-to-alist (append nodes-columns nil)) nodes-db-rows))
+                                    (links . ,(mapcar (apply-partially #'org-roam-ui-sql-to-alist '(source target type)) links-db-rows)))))
+      (websocket-send-text oru-ws (json-encode `((type . "graphdata") (data . ,response)))))))
