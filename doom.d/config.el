@@ -226,7 +226,17 @@ If &optinoal `force' is supplied, create the drawer if it does not exist."
   ;; emacs add-hook! for this but it that case it wouldn't work.
   (add-hook 'org-agenda-finalize-hook
     (lambda ()
-      (highlight-regexp "NOWORK" 'NOWORK-face))))
+      (highlight-regexp "NOWORK" 'NOWORK-face)))
+  ;; When you have a heading where the text is `~~' make it invisible, this lets
+  ;; you write what looks like non hierarchical org.
+  (add-to-list 'font-lock-extra-managed-props 'invisible)
+  (font-lock-add-keywords 'org-mode
+                          (list '("NOWORK" . 'NOWORK-face)
+                                '("^\*+ ~~$" 0 (progn
+                                                 (add-text-properties (match-beginning 0)
+                                                                      (match-end 0)
+                                                                      '(invisible t)))))))
+
 
 (use-package! org-inlinetask
   :after org)
@@ -335,7 +345,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
   ;; The CSS i got off the internet isn't setup to handle that. Patch it for now
   ;; to center figures on export, but look into writing own CSS soon. Need a
   ;; better background color, or maybe use dark mode?
-  (insert (format "#+html_head: <style>.figure p {text-align: center;}</style>")))
+  (insert (format "#+html_head: <style>.figure p {text-align: center;}</style>\n")))
 
 (defun bl/org-inherited-priority (header)
   "Search parent headings to allow of inheritence of priority."
@@ -365,10 +375,6 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
        (format "<span class=\"priority\">%s</span>"
                (org-fancy-priorities-get-value (char-to-string priority)))))
 
-
-;; Highlight the word NOWORK in org-mode.
-(font-lock-add-keywords 'org-mode
-                        '(("NOWORK" . 'NOWORK-face)))
 
 (defun bl/ivy-bibtex (&optional ARG LOCAL-BIB)
   "Wrapper around `ivy-bibtex' that turns the capture templates into the lit one.
@@ -741,10 +747,18 @@ have to pick a template each time."
   "Parse a link into a property list."
   (let ((link-path (org-element-property :path link))
         (link-type (org-element-property :type link))
+        (link-desc (when-let ((start (org-element-property :contents-begin link))
+                              (end (org-element-property :contents-end link)))
+                     (buffer-substring start end)))
+        (link-start (org-element-property :begin link))
         ;; Get the end of the actual link, without the following blanks.
         (link-end (- (org-element-property :end link)
                      (org-element-property :post-blank link))))
-    (list :type link-type :path link-path :end link-end)))
+    (list :type link-type
+          :path link-path
+          :description link-desc
+          :start link-start
+          :end link-end)))
 
 (defun bl/org--get-links-from-buffer ()
   "Get all links in an org buffer."
@@ -788,34 +802,36 @@ Adds and extra headline (and css it make it invisible) before the bibliography
 so it is not hidden by the final headline being private."
   (ignore backend)
   ;; Get the top level org-roam node and see if it has a :ROAM_REFS:
-  (let* ((node (org-roam-node-at-point (point-min)))
-         ;; TODO Handle cases where there are multiple :ROAM_REFS:
-         (ref (car (org-roam-node-refs node)))
-         ;; Make sure we don't try to check a key when there isn't a :ROAM_REFS:
-         (ref-lookup (when ref (org-ref-key-in-file-p ref (car org-ref-default-bibliography)))))
-    ;; Add a bibliography if we have cite links in the buffer or if the
-    ;; :ROAM_REF: is a cite-link
-    (when (or ref-lookup (bl/org-ref--get-cite-links-from-buffer))
-      (goto-char (bl/org-end-of-property-drawer (point-min)))
-      (newline)
-      ;; Add Extra CSS so that any h2 whose parent has the class BIBLIOGRAPHY is hidden.
-      (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY h2 {display: none;} {display: none;}</style>\n")
-      ;; Add Extra CSS for a hidden cite link to this current paper.
-      (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY a.org-ref-reference {display: none;}</style>\n")
-      (goto-char (point-max))
-      ;; Add a new headline (which makes sure the bibliography is visible even if
-      ;; the last headline is private). Set the `HTML_CONTAINER_CLASS' property
-      ;; for this headling, this will cause the parent of the h2 tag (representing
-      ;; this headline) to have and extra class. We set this class to BIBLIOGRAPHY
-      ;; so the headline will be styled with display: none;
-      (insert "* \n:PROPERTIES:\n:HTML_CONTAINER_CLASS: BIBLIOGRAPHY\n:END:\n")
-      ;; If the :ROAM_REFS: is present, add a new secret citelink (which is
-      ;; hidden with CSS) for it. This will force the bibliography to contain a
-      ;; reference to this paper (that the note is on). It will also trigger a
-      ;; bibliography if there are no other citelinks on the page.
-      (if ref-lookup (insert (format "cite:%s\n" ref)))
-      (insert (concat "bibliography:" (car org-ref-default-bibliography) "\n"))
-      (insert (concat "bibliographystyle:" org-ref--bibliography-style "\n")))))
+  (save-excursion
+    (goto-char (point-min))
+    (let* ((node (org-roam-node-at-point))
+           ;; TODO Handle cases where there are multiple :ROAM_REFS:
+           (ref (when node (car (org-roam-node-refs node))))
+           ;; Make sure we don't try to check a key when there isn't a :ROAM_REFS:
+           (ref-lookup (when ref (org-ref-key-in-file-p ref (car org-ref-default-bibliography)))))
+        ;; Add a bibliography if we have cite links in the buffer or if the
+        ;; :ROAM_REF: is a cite-link
+        (when (or ref-lookup (bl/org-ref--get-cite-links-from-buffer))
+          (goto-char (bl/org-end-of-property-drawer (point-min)))
+          (newline)
+          ;; Add Extra CSS so that any h2 whose parent has the class BIBLIOGRAPHY is hidden.
+          (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY h2 {display: none;} {display: none;}</style>\n")
+          ;; Add Extra CSS for a hidden cite link to this current paper.
+          (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY a.org-ref-reference {display: none;}</style>\n")
+          (goto-char (point-max))
+          ;; Add a new headline (which makes sure the bibliography is visible even if
+          ;; the last headline is private). Set the `HTML_CONTAINER_CLASS' property
+          ;; for this headling, this will cause the parent of the h2 tag (representing
+          ;; this headline) to have and extra class. We set this class to BIBLIOGRAPHY
+          ;; so the headline will be styled with display: none;
+          (insert "* \n:PROPERTIES:\n:HTML_CONTAINER_CLASS: BIBLIOGRAPHY\n:END:\n")
+          ;; If the :ROAM_REFS: is present, add a new secret citelink (which is
+          ;; hidden with CSS) for it. This will force the bibliography to contain a
+          ;; reference to this paper (that the note is on). It will also trigger a
+          ;; bibliography if there are no other citelinks on the page.
+          (if ref-lookup (insert (format "cite:%s\n" ref)))
+          (insert (concat "bibliography:" (car org-ref-default-bibliography) "\n"))
+          (insert (concat "bibliographystyle:" org-ref--bibliography-style "\n"))))))
 
 (defun org-html-export-to-html-filename (filename &optional async subtreep visible-only body-only ext-plist)
   "Export an org mode file to html via filename."
