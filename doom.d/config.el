@@ -15,8 +15,8 @@
 
 (map! :leader
       :prefix ("i" . "insert")
-      :n :desc "Insert an em-dash (—)" "m" (lambda () (interactive)(insert-char #x002014))
-      :n :desc "Insert a shrug (¯\\_(ツ)_/¯)" "S" (lambda () (interactive) (insert "¯\\_(ツ)_/¯")))
+      :desc "Insert an em-dash (—)" :nv "m" (lambda! (insert-char #x002014))
+      :desc "Insert a shrug (¯\\_(ツ)_/¯)" :nv "S" (lambda! (insert "¯\\_(ツ)_/¯")))
 
 ;; Some functionality uses this to identify you, e.g. PGP configuration, email
 ;; clients, file templates and snippets.
@@ -196,7 +196,7 @@ If &optinoal `force' is supplied, create the drawer if it does not exist."
         "c" #'org-capture) ;; Capture notes into org mode with SPC n c
   (map! :leader
         :prefix ("m" . "org-mode")
-        :desc "Open my global todo list" "T" #'org-todo-list ;; Build a global todo list from files with the todo filetags
+        :desc "Insert an inline TODO" "T" #'org-inlinetask-insert-task ;; Insert a TODO that doesn't trigger nesting.
         :desc "Insert an empty property drawer" "O" (lambda () (interactive) (org-insert-property-drawer)))
   (setq org-src-fontify-natively 't)  ;; Use syntax highlighting for code blocks.
   ;; The available TODO states, the ones after the "|" are considered finished.
