@@ -239,7 +239,18 @@ If &optinoal `force' is supplied, create the drawer if it does not exist."
 
 
 (use-package! org-inlinetask
-  :after org)
+  :after org
+  :config
+  (setq org-inlinetask-default-state "TODO"
+        org-inlinetask-min-level 10)
+  (face-spec-set 'org-inlinetask '((t :inherit outline-8)) 'face-defface-spec)
+  (font-lock-add-keywords 'org-mode
+                          (list `(,(format "^\\*\\{%d\\}[^*]" org-inlinetask-min-level) 0
+                                  (progn
+                                    (add-text-properties (match-beginning 0)
+                                                         (- (match-end 0) 3)
+                                                         '(invisible t)))))))
+
 
 ;; Keybinding for monthly and yearly agenda views.
 (map! :after evil-org-agenda
@@ -498,7 +509,7 @@ have to pick a template each time."
            ;; have journal entries be second level, which is consistent with old
            ;; notes, and just nicer to look at.
            :if-new (file+head+olp "%<%Y-%m-%d>.org"
-                                  "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview inlineimages\n"
+                                  "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview inlineimages\n#+filetags: :journal:\n"
                                   ("Journal")))))
   (map! :leader
         :prefix ("j" . "journal")
