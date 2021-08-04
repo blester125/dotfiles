@@ -71,4 +71,5 @@
           :recipe (:host github :repo "l3kn/org-fc" :files (:defaults "awk" "demo.org")))
 
 (package! websocket)
-(package! org-roam-ui :recipe (:host github :repo "org-roam/org-roam-ui" :files ("*.el" "out")))
+;; (package! org-roam-ui :recipe (:host github :repo "org-roam/org-roam-ui" :files ("*.el" "out")))
+(package! org-roam-ui :recipe (:local-repo "org-roam-ui" :files ("*.el" "out")))

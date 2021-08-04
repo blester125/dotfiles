@@ -7,9 +7,6 @@
 ;; sync' after modifying this file!
 (setq x-super-keysym 'meta) ;; Set the left super key to the meta, avoid alt clashes with i3
 (setq which-key-idle-delay 0.5) ;; Show me help quicker lol.
-;; Don't move the cursor backwards (vim behavior) when leaving insert mode. Should make things like inserting links much
-;; easier.
-(setq evil-move-cursor-back 'nil)
 
 ;; Disable `describe-gnu-project' because it opens a web-browser, I never actually
 ;; want to see it, and it takes forever.
@@ -134,7 +131,9 @@
         evil-split-window-below t)  ;; Open horizontal splits below the current window.
   ;; Use evil commentary so things like commenting a visual selection work.
   (evil-commentary-mode)
-  (map! :m "<end>" 'evil-end-of-line-or-visual-line))
+  (map! :m "<end>" 'evil-end-of-line-or-visual-line)
+  ;; Save with `:W' too because I am heavy on shift
+  (evil-ex-define-cmd "W[RITE]" 'evil-write))
 
 ;; Ivy the selection library via fuzzy matching I use
 (after! ivy
@@ -228,6 +227,9 @@ If &optinoal `force' is supplied, create the drawer if it does not exist."
   (add-hook 'org-agenda-finalize-hook
     (lambda ()
       (highlight-regexp "NOWORK" 'NOWORK-face))))
+
+(use-package! org-inlinetask
+  :after org)
 
 ;; Keybinding for monthly and yearly agenda views.
 (map! :after evil-org-agenda
@@ -1247,4 +1249,5 @@ function to be run often, just when you are initializing a new computer.
   (setq org-roam-ui-sync-theme 't
         org-roam-ui-follow 't
         org-roam-ui-update-on-save 't
-        org-roam-ui-open-on-start 't))
+        org-roam-ui-open-on-start 't
+        org-roam-ui-find-ref-title 't))
