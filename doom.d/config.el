@@ -37,6 +37,7 @@
 (setq-hook! 'text-mode-hook fill-column 120)
 (setq-hook! 'prog-mode-hook fill-column 80)
 (add-hook! 'prog-mode-hook #'display-fill-column-indicator-mode)
+(add-hook! 'prog-mode-hook #'hs-minor-mode)
 
 ;; Virtually wrap lines at `fill-column' characters.
 (use-package! visual-fill-column
@@ -1310,9 +1311,10 @@ function to be run often, just when you are initializing a new computer.
   :config
   (defvar org-gcal-cred-file (concat (getenv "HOME") "/Documents/Secrets/gcal-secrets.json"))
   (defvar org-gcal-org-file (concat notes "g-cal.org"))
-  (setq org-gcal-client-id (get-json-config-value 'org-gcal-client-id org-gcal-cred-file)
-        org-gcal-client-secret (get-json-config-value 'org-gcal-client-secret org-gcal-cred-file)
-        org-gcal-file-alist `((,(get-json-config-value 'calendar-id org-gcal-cred-file) . ,org-gcal-org-file))))
+  (when (file-exists-p org-gcal-cred-file)
+    (setq org-gcal-client-id (get-json-config-value 'org-gcal-client-id org-gcal-cred-file)
+          org-gcal-client-secret (get-json-config-value 'org-gcal-client-secret org-gcal-cred-file)
+          org-gcal-file-alist `((,(get-json-config-value 'calendar-id org-gcal-cred-file) . ,org-gcal-org-file)))))
 
 (use-package! mixed-pitch
   ;; Hooking org-roam-bibtex-mode is the easiest way to get mixed pitch in the
