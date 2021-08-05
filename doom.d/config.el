@@ -1,6 +1,5 @@
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
-(when WORK (load (concat doom-private-dir "work-config.el")))
 (load (concat doom-private-dir "faces.el"))
 
 ;; Place your private configuration here! Remember, you do not need to run 'doom
@@ -46,6 +45,7 @@
 
 ;; The symbol used when you have an org header closed.
 (setq org-ellipsis " ⤵")
+(setq projectile-project-search-path `(,(concat (getenv "HOME") "/dev")))
 
 ;; Doom exposes five (optional) variables for controlling fonts in Doom. Here
 ;; are the three important ones:
@@ -1295,3 +1295,5 @@ function to be run often, just when you are initializing a new computer.
   (setq org-gcal-client-id (get-json-config-value 'org-gcal-client-id org-gcal-cred-file)
         org-gcal-client-secret (get-json-config-value 'org-gcal-client-secret org-gcal-cred-file)
         org-gcal-file-alist `((,(get-json-config-value 'calendar-id org-gcal-cred-file) . ,org-gcal-org-file))))
+
+(when WORK (load (concat doom-private-dir "work-config.el")))
