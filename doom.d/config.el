@@ -64,7 +64,8 @@
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
 (setq doom-theme 'doom-Iosvkem)
-(setq doom-font (font-spec :family "Input Mono" :size 14))
+(setq doom-font (font-spec :family "Input Mono" :size 14)
+      doom-variable-pitch-font (font-spec :family "ETBembo" :size 18))
 
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
@@ -1312,5 +1313,12 @@ function to be run often, just when you are initializing a new computer.
   (setq org-gcal-client-id (get-json-config-value 'org-gcal-client-id org-gcal-cred-file)
         org-gcal-client-secret (get-json-config-value 'org-gcal-client-secret org-gcal-cred-file)
         org-gcal-file-alist `((,(get-json-config-value 'calendar-id org-gcal-cred-file) . ,org-gcal-org-file))))
+
+(use-package! mixed-pitch
+  ;; Hooking org-roam-bibtex-mode is the easiest way to get mixed pitch in the
+  ;; roam backlink buffer lol.
+  :hook ((org-mode org-roam-bibtex-mode) . mixed-pitch-mode)
+  :config
+  (setq mixed-pitch-set-height 't))
 
 (when WORK (load (concat doom-private-dir "work-config.el")))
