@@ -524,6 +524,23 @@ have to pick a template each time."
         :desc "Open the note for yesterday" "Y" 'org-roam-dailies-goto-yesterday
         :desc "Capture a new entry for tomorrow's note" "t" 'org-roam-dailies-capture-tomorrow
         :desc "Open the note for tomorrow" "T" 'org-roam-dailies-goto-tomorrow)
+  ;; I can't stand how org-roam leave your point at the beginning of the link
+  ;; when you insert a new one. Override with the `org-with-point-at' removed.
+  (defun bl/org-roam-capture--finalize-insert-link ()
+    "Insert a link to ID into the buffer where Org-capture was called.
+     ID is the Org id of the newly captured content.
+     This function is to be called in the Org-capture finalization process."
+    (when-let* ((mkr (org-roam-capture--get :call-location))
+                (buf (marker-buffer mkr)))
+    (with-current-buffer buf
+      (when-let ((region (org-roam-capture--get :region)))
+        (org-roam-unshield-region (car region) (cdr region))
+        (delete-region (car region) (cdr region))
+        (set-marker (car region) nil)
+        (set-marker (cdr region) nil))
+      (insert (org-link-make-string (concat "id:" (org-roam-capture--get :id))
+                                    (org-roam-capture--get :link-description))))))
+  (advice-add 'org-roam-capture--finalize-insert-link :override 'bl/org-roam-capture--finalize-insert-link)
   )
 
 (defun bl/org-roam-node-doom-tags (tags)
