@@ -749,7 +749,9 @@ have to pick a template each time."
 (defun bl/update-agenda-files (&rest _)
   "Update the value of `org-agenda-files'."
   (interactive)
-  (setq org-agenda-files (bl/find-roam-todo-agenda-files)))
+  (if (boundp 'org-gcal-org-file)
+      (setq org-agenda-files (append (list org-gcal-org-file) (bl/find-roam-todo-agenda-files)))
+    (setq org-agenda-files (bl/find-roam-todo-agenda-files))))
 
 ;; Several of the next functions are used to recursively export files and follow
 ;; their links. Results in the export of a connected component in the graph. Use
@@ -1278,3 +1280,18 @@ function to be run often, just when you are initializing a new computer.
         org-roam-ui-update-on-save 't
         org-roam-ui-open-on-start 't
         org-roam-ui-find-ref-title 't))
+
+(defun get-json-config-value (key file)
+  "Read `key' from json stored in `file'"
+  (cdr (assoc key (json-read-file file))))
+
+(use-package! json)
+
+(use-package! org-gcal
+  :after org
+  :config
+  (defvar org-gcal-cred-file (concat (getenv "HOME") "/Documents/Secrets/gcal-secrets.json"))
+  (defvar org-gcal-org-file (concat notes "g-cal.org"))
+  (setq org-gcal-client-id (get-json-config-value 'org-gcal-client-id org-gcal-cred-file)
+        org-gcal-client-secret (get-json-config-value 'org-gcal-client-secret org-gcal-cred-file)
+        org-gcal-file-alist `((,(get-json-config-value 'calendar-id org-gcal-cred-file) . ,org-gcal-org-file))))
