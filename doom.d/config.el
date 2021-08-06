@@ -553,7 +553,8 @@ in `org-roam-find-file--ignore-tags'
 
 Applies the `shadow' face as a property, like the default doom-tags does."
   (let* ((tags (split-string tags ":" 't))
-         (tags (seq-remove (lambda (elt) (member elt org-roam-find-file--ignore-tags)) tags)))
+         ;; Remove dups in-case the directory tag inference is the same as explicit tags.
+         (tags (delete-dups (seq-remove (lambda (elt) (member elt org-roam-find-file--ignore-tags)) tags))))
     (propertize (org-make-tag-string tags) 'face 'shadow)))
 
 (defun bl/org-roam--counsel-rg (&optional INITIAL-INPUT)
