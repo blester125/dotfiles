@@ -1312,6 +1312,7 @@ function to be run often, just when you are initializing a new computer.
   :config
   (defvar org-gcal-cred-file (concat (getenv "HOME") "/Documents/Secrets/gcal-secrets.json"))
   (defvar org-gcal-org-file (concat notes "g-cal.org"))
+  (setq org-gcal-recurring-events-mode 'nested)
   (when (file-exists-p org-gcal-cred-file)
     (setq org-gcal-client-id (get-json-config-value 'org-gcal-client-id org-gcal-cred-file)
           org-gcal-client-secret (get-json-config-value 'org-gcal-client-secret org-gcal-cred-file)
