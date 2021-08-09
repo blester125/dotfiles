@@ -71,4 +71,5 @@
 
 (package! websocket)
 ;; (package! org-roam-ui :recipe (:host github :repo "org-roam/org-roam-ui" :files ("*.el" "out")))
+(setq straight-disable-byte-compliation 't)
 (package! org-roam-ui :recipe (:local-repo "org-roam-ui" :files ("*.el" "out")))

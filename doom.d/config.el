@@ -692,7 +692,8 @@ have to pick a template each time."
           ("book" . "%a, <a href=\"%U\">%t</a>, %u (%y).")
           ("techreport" . "%a, <a href=\"%U\">%t</a>, %i, %u (%y).")
           ("proceedings" . "%e, <a href=\"%U\">%t</a> in %S, %u (%y).")
-          ("inproceedings" . "%a, <a href=\"%U\">%t</a>, %p, in %b, edited by %e, %u (%y)"))
+          ("inproceedings" . "%a, <a href=\"%U\">%t</a>, %p, in %b, edited by %e, %u (%y)")
+          ("misc" . "%a, <a href=\"%U\">%t</a>, (%y)"))
    )
    (defvar org-ref--bibliography-style "authordate1" "The org ref bibliography format, only works in LaTeX?")
    ;; Add a bibliography link to files that have cite links.
