@@ -37,7 +37,6 @@
 (setq-hook! 'text-mode-hook fill-column 120)
 (setq-hook! 'prog-mode-hook fill-column 80)
 (add-hook! 'prog-mode-hook #'display-fill-column-indicator-mode)
-(add-hook! 'prog-mode-hook #'hs-minor-mode)
 
 ;; Virtually wrap lines at `fill-column' characters.
 (use-package! visual-fill-column
@@ -304,10 +303,6 @@ If &optinoal `force' is supplied, create the drawer if it does not exist."
                 (if a (org-html-export-to-html-recursive t s v b)
                   (org-open-file (org-html-export-to-html-recursive nil s v b)))))))))
 
-;; For fancy js-reveal presentations
-(use-package! ox-reveal
-  :after ox)
-
 (defun bl/org-export--move-output (filename &optional base-dir export-dir)
   "When exporting, move the resulting file from `filename' to the `export-dir'
 
@@ -358,7 +353,8 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
   ;; The CSS i got off the internet isn't setup to handle that. Patch it for now
   ;; to center figures on export, but look into writing own CSS soon. Need a
   ;; better background color, or maybe use dark mode?
-  (insert (format "#+html_head: <style>.figure p {text-align: center;}</style>\n")))
+  (insert "#+html_head_extra: <style>.figure p {text-align: center;}</style>\n")
+  (insert "#+html_head_extra: <style>*{font-family: etbook !important}</style>\n"))
 
 (defun bl/org-inherited-priority (header)
   "Search parent headings to allow of inheritence of priority."
@@ -387,17 +383,6 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
   (and priority
        (format "<span class=\"priority\">%s</span>"
                (org-fancy-priorities-get-value (char-to-string priority)))))
-
-
-(defun bl/ivy-bibtex (&optional ARG LOCAL-BIB)
-  "Wrapper around `ivy-bibtex' that turns the capture templates into the lit one.
-
-Replaces `org-roam-capture-templates' with `orb-capture-templates' temporally.
-This lets us keep a single template in `orf-roam-capture-templates' so we don't
-have to pick a template each time."
-  (interactive)
-  (let ((org-roam-capture-templates orb-capture-templates))
-    (ivy-bibtex ARG LOCAL-BIB)))
 
 ;; This package lets us drag images into emacs where they are inserted at point
 ;; (where you left your cursor, not where you drag it to). It also supports
@@ -573,6 +558,9 @@ Applies the `shadow' face as a property, like the default doom-tags does."
   ;; it is case-insensitive, but adding an upper case makes it case-sensative
   (counsel-rg INITIAL-INPUT (expand-file-name org-roam-dailies-directory org-roam-directory) "--type org" "org-roam-journal search: "))
 
+(defvar bl/org-roam-create-closest-node-from-search 'nil
+  "When inserting an org-roam link from a `rg' search, create a node on the closet headline. When nil, use the first org-roam node you find.")
+
 (defun bl/ivy-insert-org-roam-link (candidate)
   "Insert an org-roam link based on the selected file from search.
 
@@ -591,40 +579,33 @@ top-level is there are none in the file."
                        (goto-char (point-min))
                        ;; Jump forward to the line the match was on.
                        (forward-line (string-to-number line-number))
-                       ;; This `let' will use the nearest org-roam node, creating
-                       ;; one if there is none in the file.
-                       ;; (let ((node (org-roam-node-at-point)))
-                       ;;   ;; Save the file and update the db in case we had to
-                       ;;   ;; create a new node.
-                       ;;   (save-buffer)
-                       ;;   (org-roam-db-update-file filename)
-                       ;;   (org-roam-node-id node)))))
-                       ;; This `let' will create a new org-roam node for the
-                       ;; nearest headline.
-                       (let ((id (org-id-get-create)))
-                         ;; Save the file and update the db in case we had to
-                         ;; create a new node.
-                         (save-buffer)
-                         (org-roam-db-update-file filename)
-                         id))))
+                       (if bl/org-roam-create-closet-node-from-serach
+                           ;; This `let' will create a new org-roam node for the
+                           ;; nearest headline.
+                           (let ((id (org-id-get-create)))
+                             ;; Save the file and update the db in case we had to
+                             ;; create a new node.
+                             (save-buffer)
+                             (org-roam-db-update-file filename)
+                             id)
+                         ;; This `let' will use the nearest org-roam node, creating
+                         ;; one if there is none in the file.
+                         (let ((node (org-roam-node-at-point)))
+                           ;; Save the file and update the db in case we had to
+                           ;; create a new node.
+                           (save-buffer)
+                           (org-roam-db-update-file filename)
+                           (org-roam-node-id node))))))
                  ;; Get node information from the id, will pull db which is why
                  ;; we saved the file after (possibly) making an org-roam node.
                  (node (org-roam-node-from-id id))
                  (title (org-roam-node-title node)))
       ;; Create and insert a id link.
-      (insert (format "[[id:%s][%s]]" id title)))))
+      (insert org-make-link-string (concat "id:" id) title))))
 
 ;; Don't include template text when created a org file from scratch, it doesn't
 ;; happen often and there isn't a real need.
 (set-file-template! "\\.org$" :ignore t)
-
-;; TODO Update, add yanks for things like #+begin_src with lang and session values
-(use-package! yankpad
-  :config
-  (setq yankpad-file (concat doom-private-dir "yankpad.org"))
-  (map! :leader
-        :desc "Snippits with Yankpad"
-        "y" #'yankpad-insert))
 
 ;; Override the default themes awful background for markdown code block backgrounds.
 (custom-set-faces!
@@ -644,7 +625,7 @@ top-level is there are none in the file."
 "The template for creating a new Litature Note.")
 
 (defun bl/ivy-bibtex (&optional ARG LOCAL-BIB)
-  "Wrapper around `ivy-bibtex' that turns the capture templates into the lit one.
+  "Wrapper around `ivy-bibtex' to turn the capture templates into the lit one.
 
 Replaces `org-roam-capture-templates' with `orb-capture-templates' temporally.
 This lets us keep a single template in `orf-roam-capture-templates' so we don't
@@ -1306,7 +1287,8 @@ function to be run often, just when you are initializing a new computer.
   "Read `key' from json stored in `file'"
   (cdr (assoc key (json-read-file file))))
 
-(use-package! json)
+(use-package! json
+  :after-call get-json-config-value)
 
 (use-package! org-gcal
   :after org
@@ -1322,7 +1304,7 @@ function to be run often, just when you are initializing a new computer.
 (use-package! mixed-pitch
   ;; Hooking org-roam-bibtex-mode is the easiest way to get mixed pitch in the
   ;; roam backlink buffer lol.
-  :hook ((org-mode org-roam-bibtex-mode) . mixed-pitch-mode)
+  :hook ((org-mode org-roam-bibtex-mode markdown-mode) . mixed-pitch-mode)
   :config
   (setq mixed-pitch-set-height 't))
 

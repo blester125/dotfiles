@@ -1,6 +1,0 @@
-* org-mode
-** properties :p:
-:properties:
-:end:
-** css :c:
-#+html_head <link rel="stylesheet" type="text/css" href="https://gongzhitaao.org/orgcss/org.css" />
