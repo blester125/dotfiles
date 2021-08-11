@@ -1356,4 +1356,10 @@ function to be run often, just when you are initializing a new computer.
   :config
   (setq mixed-pitch-set-height 't))
 
+(after! doom-modeline
+  (setq doom-modeline-hud 't
+        doom-modeline-icon 't
+        doom-modeline-major-mode-icon 't
+        doom-modeline-major-mode-color-icon 't))
+
 (when WORK (load (concat doom-private-dir "work-config.el")))
