@@ -1318,6 +1318,18 @@ function to be run often, just when you are initializing a new computer.
   (setq doom-modeline-hud 't
         doom-modeline-icon 't
         doom-modeline-major-mode-icon 't
-        doom-modeline-major-mode-color-icon 't))
+        doom-modeline-major-mode-color-icon 't)
+  (doom-modeline-def-segment misc-info
+    (when (doom-modeline--active)
+      '("" mode-line-misc-info))))
+
+(after! org-pomodoro
+  (setq org-pomodoro-keep-killed-pomodoro-time 't
+        org-pomodoro-clock-break 't
+        org-pomodoro-length 50
+        org-pomodoro-short-break-length 10
+        org-pomodoro-long-break-length 40
+        org-pomodoro-long-break-frequency 4)
+  (add-hook! 'org-clock-in-hook (setq global-mode-string (delete 'org-mode-line-string global-mode-string))))
 
 (when WORK (load (concat doom-private-dir "work-config.el")))
