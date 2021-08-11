@@ -48,8 +48,6 @@
 ;; ...Or *all* packages (NOT RECOMMENDED; will likely break things)
 ;(unpin! t)
 
-(when WORK (load (concat doom-private-dir "work-packages.el")))
-
 (package! flyspell)
 (package! evil-commentary)
 (package! org-ref)
@@ -71,3 +69,5 @@
 ;; (package! org-roam-ui :recipe (:host github :repo "org-roam/org-roam-ui" :files ("*.el" "out")))
 (setq straight-disable-byte-compliation 't)
 (package! org-roam-ui :recipe (:local-repo "org-roam-ui" :files ("*.el" "out")))
+
+(when WORK (load (concat doom-private-dir "work-packages.el")))

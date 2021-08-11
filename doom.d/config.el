@@ -413,7 +413,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
 
 ;; A Zettelkasten in org mode, the reason I switched
 (after! org-roam
-  (org-roam-setup)
+  (org-roam-db-autosync-mode)
   (map! :leader
         (:prefix ("r" . "roam")
          :desc "Open org-roam backlink panel" "l" #'org-roam-buffer-toggle
@@ -528,50 +528,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
         (set-marker (cdr region) nil))
       (insert (org-link-make-string (concat "id:" (org-roam-capture--get :id))
                                     (org-roam-capture--get :link-description))))))
-  (advice-add 'org-roam-capture--finalize-insert-link :override 'bl/org-roam-capture--finalize-insert-link)
-
-(defun org-roam-node-read--format-entry (node width)
-  "Formats NODE for display in the results list.
-WIDTH is the width of the results list.
-Uses `org-roam-node-display-template' to format the entry."
-  (let ((fmt (org-roam-node-read--process-display-format org-roam-node-display-template)))
-    (org-roam-format-template
-     (car fmt)
-     (lambda (field _default-val)
-       (let* ((field (split-string field ":"))
-              (field-name (car field))
-              (field-width (cadr field))
-              (getter (intern (concat "org-roam-node-" field-name)))
-              (field-value (or (funcall getter node) "")))
-         (when (and (equal field-name "tags")
-                    field-value)
-           (setq field-value (org-roam-node-read--tags-to-str field-value)))
-         (when (and (equal field-name "file")
-                    field-value)
-           (setq field-value (file-relative-name field-value org-roam-directory)))
-         (when (and (equal field-name "olp")
-                    field-value)
-           (setq field-value (string-join field-value " > ")))
-         (if (not field-width)
-             field-value
-           (setq field-width (string-to-number field-width))
-           (let ((display-string (truncate-string-to-width
-                                  field-value
-                                  (if (> field-width 0)
-                                      field-width
-                                    (- width (cdr fmt)))
-                                  0 ?\s)))
-             ;; Setting the display (which would be padded out to the field length) for an
-             ;; empty string results in an empty string and misalignment for candidates that
-             ;; don't have some field. This uses the actual display string, made of spaces
-             ;; when the field-value is "" so that we actually take up space.
-             (if (not (equal field-value ""))
-                 ;; Remove properties from the full candidate string, otherwise the display
-                 ;; formatting with pre-prioritized field-values gets messed up.
-                 (propertize (substring-no-properties field-value) 'display display-string)
-               display-string))))))))
-
-  )
+  (advice-add 'org-roam-capture--finalize-insert-link :override 'bl/org-roam-capture--finalize-insert-link))
 
 (defun bl/org-roam-node-doom-tags (tags)
   "Remove ignored tags from the roam search formatting.
@@ -586,6 +543,7 @@ Applies the `shadow' face as a property, like the default doom-tags does."
     (propertize (org-make-tag-string tags) 'face 'shadow)))
 
 (defun bl/org-roam-node-doom-hierarchy (hierarchy)
+  "Flip the doom hierarchy of nodes so the child heading is first."
   (let ((splitter " > ")
         (joiner (propertize " < " 'face 'shadow)))
     (string-join (reverse (split-string-and-unquote hierarchy splitter)) joiner)))
