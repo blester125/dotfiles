@@ -528,7 +528,47 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
         (set-marker (cdr region) nil))
       (insert (org-link-make-string (concat "id:" (org-roam-capture--get :id))
                                     (org-roam-capture--get :link-description))))))
-  (advice-add 'org-roam-capture--finalize-insert-link :override 'bl/org-roam-capture--finalize-insert-link))
+  (advice-add 'org-roam-capture--finalize-insert-link :override 'bl/org-roam-capture--finalize-insert-link)
+  (advice-add 'org-roam-node-find :around 'bl/org-roam-node-find))
+
+;; Proper highlighting in org-roam search
+(defun bl/map-text-properties (str prop fun)
+  "Apply `fun' to all text properties of type `prop' in `str'.
+
+If the output of `fun', called on the property value is `nil', the property is removed."
+  (let ((start 0)
+        (len (length str)))
+    (while (and start (< start len))
+      (let ((end (or (next-single-property-change start prop str) len)))
+        (when-let ((value (get-text-property start prop str)))
+          (let ((updated-value (funcall fun value)))
+            (if updated-value
+                (put-text-property start end prop updated-value str)
+              (remove-text-properties start end (list prop 'nil) str))))
+        (setq start end)))
+    str))
+
+(defun bl/remove-ivy-faces (value)
+  "Remove any face added by `ivy' for value."
+  (if (listp value)
+      (seq-remove (lambda (v) (memq v ivy-minibuffer-faces)) value)
+    (if (memq value ivy-minibuffer-faces)
+        'nil
+      value)))
+
+(defun bl/ivy--highlight-ignore-order (str)
+  "Highlight the display strings in ivy instead of the actual candidate."
+  (if (text-property-any 0 (length str) 'display 'nil str)
+      (bl/map-text-properties str 'display (lambda (s)
+        (ivy--highlight-ignore-order (bl/map-text-properties s 'face 'bl/remove-ivy-faces))))
+    (ivy--highlight-ignore-order str)))
+
+(defun bl/org-roam-node-find (fun &rest args)
+  "This display string only custom highlighter breaks other finds so only do it for org-roam"
+  (let ((ivy-highlight-functions-alist '((ivy--regex-ignore-order . bl/ivy--highlight-ignore-order)
+                                         (ivy--regex-fuzzy . ivy--highlight-fuzzy)
+                                         (ivy--regex-plus . ivy--highlight-default))))
+    (apply fun args)))
 
 (defun bl/org-roam-node-doom-tags (tags)
   "Remove ignored tags from the roam search formatting.
