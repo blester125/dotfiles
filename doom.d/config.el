@@ -529,7 +529,9 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
       (insert (org-link-make-string (concat "id:" (org-roam-capture--get :id))
                                     (org-roam-capture--get :link-description))))))
   (advice-add 'org-roam-capture--finalize-insert-link :override 'bl/org-roam-capture--finalize-insert-link)
-  (advice-add 'org-roam-node-find :around 'bl/org-roam-node-find))
+  (advice-add 'org-roam-node-find :around 'bl/org-roam-search-highlighting)
+  (advice-add 'org-roam-node-insert :around 'bl/org-roam-search-highlighting)
+  (advice-add 'org-roam-capture :around 'bl/org-roam-search-highlighting))
 
 ;; Proper highlighting in org-roam search
 (defun bl/map-text-properties (str prop fun)
@@ -563,7 +565,7 @@ If the output of `fun', called on the property value is `nil', the property is r
         (ivy--highlight-ignore-order (bl/map-text-properties s 'face 'bl/remove-ivy-faces))))
     (ivy--highlight-ignore-order str)))
 
-(defun bl/org-roam-node-find (fun &rest args)
+(defun bl/org-roam-search-highlighting (fun &rest args)
   "This display string only custom highlighter breaks other finds so only do it for org-roam"
   (let ((ivy-highlight-functions-alist '((ivy--regex-ignore-order . bl/ivy--highlight-ignore-order)
                                          (ivy--regex-fuzzy . ivy--highlight-fuzzy)
@@ -1359,6 +1361,9 @@ function to be run often, just when you are initializing a new computer.
         doom-modeline-icon 't
         doom-modeline-major-mode-icon 't
         doom-modeline-major-mode-color-icon 't)
+  ;; Org-pomodoro is the only thing I have that writes to the global-mode-string
+  ;; so set it to always display, even when the width of emacs is smaller than
+  ;; the fill-column (often happen emacs snapped to edge).
   (doom-modeline-def-segment misc-info
     (when (doom-modeline--active)
       '("" mode-line-misc-info))))
