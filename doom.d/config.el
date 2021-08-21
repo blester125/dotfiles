@@ -30,7 +30,8 @@
 
 (setq org-directory notes  ;; Where my general org notes are
       org-roam-directory zettelkasten ;; Where org-roam keeps all my files
-      org-roam-db-location (concat (getenv "HOME") "/.org-roam.db"))
+      org-roam-db-location (concat (getenv "HOME") "/.org-roam.db")
+      org-roam-file-exclude-regexp "\\.stversions")
 
 (setq-default fill-column 120)
 ;; Change the fill-column depending on if you are programming or just typing.
