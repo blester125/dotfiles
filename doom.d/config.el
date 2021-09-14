@@ -14,8 +14,8 @@
 
 (map! :leader
       :prefix ("i" . "insert")
-      :desc "Insert an em-dash (—)" :nv "m" (lambda! (insert-char #x002014))
-      :desc "Insert a shrug (¯\\_(ツ)_/¯)" :nv "S" (lambda! (insert "¯\\_(ツ)_/¯")))
+      :desc "Insert an em-dash (—)" :nv "m" (cmd! (insert-char #x002014))
+      :desc "Insert a shrug (¯\\_(ツ)_/¯)" :nv "S" (cmd! (insert "¯\\_(ツ)_/¯")))
 
 ;; Some functionality uses this to identify you, e.g. PGP configuration, email
 ;; clients, file templates and snippets.
@@ -412,6 +412,15 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
           :desc "Create a normal card." "n" 'org-fc-type-normal-init
           :desc "Create a cloze card." "c" 'org-fc-type-cloze-init))))
 
+(defun org-roam-node-insert-immediate (arg &rest args)
+  "Insert a node link, creating the node (without human input) if it doesn't exists."
+  (interactive "P")
+  (let ((args (cons arg args))
+        ;; Grab the first template and add the `:immediate-finish t' argument.
+        (org-roam-capture-templates (list (append (car org-roam-capture-templates)
+                                                  '(:immediate-finish t)))))
+    (apply #'org-roam-node-insert args)))
+
 ;; A Zettelkasten in org mode, the reason I switched
 (after! org-roam
   (org-roam-db-autosync-mode)
@@ -419,9 +428,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
         (:prefix ("r" . "roam")
          :desc "Open org-roam backlink panel" "l" #'org-roam-buffer-toggle
          :desc "Insert a new org-roam link" "i" #'org-roam-node-insert
-         ;; Override the templates with my one that saves the capture without
-         ;; getting any human input.
-         :desc "Insert a new org-roam link, create with template if missing" "I" (lambda () (interactive)(org-roam-node-insert 'nil :templates org-roam-capture-templates--immediate))
+         :desc "Insert a new org-roam link, create with template if missing" "I" #'org-roam-node-insert-immediate
          :desc "Find an org-roam file, create if not found" "f" #'org-roam-node-find
          :desc "Show the org-roam graph" "g" #'org-roam-graph
          :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
@@ -440,16 +447,9 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
   ;; template so we don't have to select between them.
   (setq org-roam-capture-templates
         '(("d" "default" plain "%?"
-           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+           :target (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
                               "#+title: ${title}\n#+startup: latexpreview inlineimages\n\n")
            :unnarrowed t)))
-  ;; A version of my org-node template that doesn't collect information, it just
-  ;; creates the result right away.
-  (defvar org-roam-capture-templates--immediate
-        '(("d" "default" plain "%?"
-           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
-                              "#+title: ${title}\n#+startup: latexpreview inlineimages\n\n")
-           :immediate-finish 't)) "A Capture template to use when auto inserting.")
   ;; A method that counts the number of backlinks a node has. Need to be defined
   ;; after org-roam is loaded to have access to this `org-roam-node' thing.
   (cl-defmethod org-roam-node-backlinkscount ((node org-roam-node))
@@ -497,7 +497,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
            ;; inserted after that path. This lets us keep a top level header and
            ;; have journal entries be second level, which is consistent with old
            ;; notes, and just nicer to look at.
-           :if-new (file+head+olp "%<%Y-%m-%d>.org"
+           :target (file+head+olp "%<%Y-%m-%d>.org"
                                   "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview inlineimages\n#+filetags: :journal:\n"
                                   ("Journal")))))
   (map! :leader
@@ -530,6 +530,8 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
       (insert (org-link-make-string (concat "id:" (org-roam-capture--get :id))
                                     (org-roam-capture--get :link-description))))))
   (advice-add 'org-roam-capture--finalize-insert-link :override 'bl/org-roam-capture--finalize-insert-link)
+  ;; Fix coloring in org-roam ivy search as ivy doesn't handle having candidates
+  ;; with a display text property.
   (advice-add 'org-roam-node-find :around 'bl/org-roam-search-highlighting)
   (advice-add 'org-roam-node-insert :around 'bl/org-roam-search-highlighting)
   (advice-add 'org-roam-capture :around 'bl/org-roam-search-highlighting))
@@ -745,7 +747,7 @@ have to pick a template each time."
         '("citekey" "title" "url" "file" "author-or-editor" "keywords" "ref"
           "author-abbrev" "journal" "booktitle" "date" "year" "doi"))
   (defvar orb-capture-templates `(("r" "bibliography note template" plain "%?"
-                                   :if-new (file+head "lit/${citekey}.org"
+                                   :target (file+head "lit/${citekey}.org"
                                                       ,lit-note-template)
                                    :unnarrowed t)) "Capture when making a lit note")
   )
