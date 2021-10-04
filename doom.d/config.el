@@ -164,7 +164,7 @@
   "Downcase all properties and end markers of a property drawer.
 
 If &optional `beg' is supplied, downcase the property drawer associated with this subtree/file.
-If &optinoal `force' is supplied, create the drawer if it does not exist."
+If &optional `force' is supplied, create the drawer if it does not exist."
   (interactive)
   (let* ((drawer (org-get-property-block beg force))
          (beg (car drawer))
@@ -609,7 +609,7 @@ Applies the `shadow' face as a property, like the default doom-tags does."
   ;; it is case-insensitive, but adding an upper case makes it case-sensative
   (counsel-rg INITIAL-INPUT (expand-file-name org-roam-dailies-directory org-roam-directory) "--type org" "org-roam-journal search: "))
 
-(defvar bl/org-roam-create-closest-node-from-search 'nil
+(defvar bl/org-roam-create-closest-node-from-search ""
   "When inserting an org-roam link from a `rg' search, create a node on the closet headline. When nil, use the first org-roam node you find.")
 
 (defun bl/ivy-insert-org-roam-link (candidate)
@@ -625,12 +625,12 @@ top-level is there are none in the file."
     (pcase-let* ((`(,filename, line-number) (split-string candidate ":"))
                  ;; Switch to the buffer of the file from the search and find/create
                  ;; the nearest org-roam node.
-                 (id (with-current-buffer filename
+                 (id (with-current-buffer (find-file-noselect filename)
                      (save-excursion
                        (goto-char (point-min))
                        ;; Jump forward to the line the match was on.
                        (forward-line (string-to-number line-number))
-                       (if bl/org-roam-create-closet-node-from-serach
+                       (if bl/org-roam-create-closest-node-from-search
                            ;; This `let' will create a new org-roam node for the
                            ;; nearest headline.
                            (let ((id (org-id-get-create)))
