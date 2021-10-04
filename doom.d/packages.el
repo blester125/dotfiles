@@ -69,3 +69,11 @@
 (package! org-roam-ui :recipe (:host github :repo "org-roam/org-roam-ui" :files ("*.el" "out")))
 
 (when WORK (load (concat doom-private-dir "work-packages.el")))
+
+;; (package! org-ref-cite :recipe
+;;   (:host "github"
+;;    :repo "jkitchin/org-ref-cite"
+;;    :files ("*.el")))
+(package! citeproc)
+(package! org-ref-cite-core :recipe (:host github :repo "jkitchin/org-ref-cite"))
+(package! org-ref-cite :recipe (:host github :repo "jkitchin/org-ref-cite"))

@@ -432,7 +432,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
          :desc "Find an org-roam file, create if not found" "f" #'org-roam-node-find
          :desc "Show the org-roam graph" "g" #'org-roam-graph
          :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
-         :desc "Get notes on a biblographic entry" "r" 'bl/ivy-bibtex
+         :desc "Get notes on a biblographic entry" "r" 'org-cite-insert
          :desc "Search notes" "s" 'bl/org-roam--counsel-rg
          :desc "Convert Headline into a Node" "n" (lambda () (interactive) (org-id-get-create)(save-buffer))
          (:prefix ("a" . "add")
@@ -670,87 +670,176 @@ top-level is there are none in the file."
                                   ":year: ${year}\n"
                                   ":doi: ${doi}\n"
                                   ":url: ${url}\n"
+                                  ":roam_refs: @${=key=}\n"
                                   ":end:\n"
                                   "#+title: ${title}\n"
                                   "#+setup: latexpreview inlineimages\n")
-"The template for creating a new Litature Note.")
+"The template for creating a new Literature Note.")
 
-(defun bl/ivy-bibtex (&optional ARG LOCAL-BIB)
-  "Wrapper around `ivy-bibtex' to turn the capture templates into the lit one.
-
-Replaces `org-roam-capture-templates' with `orb-capture-templates' temporally.
-This lets us keep a single template in `orf-roam-capture-templates' so we don't
-have to pick a template each time."
-  (interactive)
-  (let ((org-roam-capture-templates orb-capture-templates))
-    (ivy-bibtex ARG LOCAL-BIB)))
-
-;; Find and take notes on bibliographic entries, Seems to be an eager load right now
 (use-package! ivy-bibtex
-  :after org-ref
+  :after ivy
   :config
-  ;; Create a ivy version of my cite key creation function
-  (ivy-bibtex-ivify-action org-ref-insert-key-at-point ivy-bibtex-insert-cite-key)
   (setq
    bibtex-completion-notes-path lit
    bibtex-completion-bibliography bib
    bibtex-completion-pdf-field "file"
    bibtex-completion-pdf-symbol "⌘"
    bibtex-completion-notes-symbol "✎"
-   ;; When you select a biblographic entry insert a cite link. Use C-o to get a
-   ;; menu of actions, then e will open the note file.
-   ivy-bibtex-default-action 'ivy-bibtex-insert-cite-key
+   bibtex-completion-additional-search-fields '(keywords)
    bibtex-completion-notes-template-multiple-files lit-note-template
+   bibtex-completion-display-formats
+   '((t . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*}"))
   )
-  ;; Add an ivy action that inserts my version of cite lengths.
-  ;; Access extra actions with C-o and then pick an option.
-  (ivy-add-actions
-   'ivy-bibtex
-   '(("c" ivy-bibtex-insert-cite-key "Insert a cite link")))
 )
 
-(use-package! org-ref
-   :init
-   (setq org-ref-completion-library 'org-ref-ivy-cite)
-   :config
-   (setq
-     org-ref-default-bibliography (list bib)
-     org-ref-notes-directory lit
-     org-ref-notes-function 'orb-edit-notes
-     bibtex-completion-bibliography bib
-     bibtex-completion-notes-path lit
-     org-ref-bibliography-entry-format
-        '(("article" . "%a, <a href=\"%U\">%t</a>, <i>%j</i>, <b>%v(%n)</b>, %p (%y). <a href=\"http://dx.doi.org/%D\">doi</a>.")
-          ("book" . "%a, <a href=\"%U\">%t</a>, %u (%y).")
-          ("techreport" . "%a, <a href=\"%U\">%t</a>, %i, %u (%y).")
-          ("proceedings" . "%e, <a href=\"%U\">%t</a> in %S, %u (%y).")
-          ("inproceedings" . "%a, <a href=\"%U\">%t</a>, %p, in %b, edited by %e, %u (%y)")
-          ("misc" . "%a, <a href=\"%U\">%t</a>, (%y)"))
-   )
-   (defvar org-ref--bibliography-style "authordate1" "The org ref bibliography format, only works in LaTeX?")
-   ;; Add a bibliography link to files that have cite links.
-   (add-hook! 'org-export-before-parsing-hook #'bl/org-ref--add-bibliography-link)
-   ;; Make sure we don't byte complie this function (`#'), we need to read the
-   ;; value of `default-directory' which might change.
-   (add-hook! 'org-export-before-parsing-hook 'bl/org-export--add-ref-note-links))
+;; Stop org-ref from adding keywords to the search template
+(setq org-ref-bibtex-completion-add-keywords-field 'nil)
+
+(use-package! oc
+  :after org)
+
+(use-package! oc-csl
+  :after org)
+
+(use-package! citeproc
+  :after oc-csl)
 
 ;; TODO Unify options and menu for actions between Spc-r-r and RET on a cite link
-(use-package! org-roam-bibtex
-  :after org-roam
-  ;; Load when we hit SPC r r
-  :after-call bl/ivy-bibtex
-  :hook (org-roam-mode . org-roam-bibtex-mode)
+;; TODO Figure out how to lazy load without missing link coloring
+(use-package! org-ref-cite
   :config
-  (setq orb-insert-interface 'ivy-bibtex)
-  (setq orb-note-actions-interface 'ivy)
-  (setq orb-preformat-keywords
-        '("citekey" "title" "url" "file" "author-or-editor" "keywords" "ref"
-          "author-abbrev" "journal" "booktitle" "date" "year" "doi"))
-  (defvar orb-capture-templates `(("r" "bibliography note template" plain "%?"
-                                   :target (file+head "lit/${citekey}.org"
-                                                      ,lit-note-template)
-                                   :unnarrowed t)) "Capture when making a lit note")
-  )
+  (set-face-attribute 'org-cite nil :foreground "DarkSeaGreen4")
+  (set-face-attribute 'org-cite-key nil :foreground "forest green")
+  (setq
+   org-cite-global-bibliography (list bibtex-completion-bibliography)
+   org-cite-csl-styles-dir (concat notes "csl-styles")
+   org-cite-insert-processor 'org-ref-cite
+   org-cite-follow-processor 'org-ref-cite
+   org-cite-activate-processor 'org-ref-cite
+   org-cite-export-processors '((html csl "association-for-computational-linguistics.csl")
+                                (latex org-ref-cite)
+                                (t basic)))
+  (ivy-set-display-transformer 'org-cite-insert 'ivy-bibtex-display-transformer)
+  ;; Add a bibliography link to files that have cite links.
+  (add-hook! 'org-export-before-parsing-hook #'bl/org-cite--add-bibliography-link)
+  ;; TODO Update this to work with org-cite
+  ;; Make sure we don't byte complie this function (`#'), we need to read the
+  ;; value of `default-directory' which might change.
+  (add-hook! 'org-export-before-parsing-hook 'bl/org-export--add-ref-note-links)
+  ;; Add citation following on `RET'.
+  (advice-add '+org/dwim-at-point :before-until 'bl/+org/dwim-at-point)
+
+  ;; Custom fork adding ":caller 'org-cite-insert" to fix formatting
+  (defun org-ref-cite-insert-processor (context arg)
+    "Function for inserting a citation.
+
+  With one prefix ARG, set style
+  With two prefix ARG delete reference/cite at point.
+  Argument CONTEXT is an org element at point, usually a citation
+    or citation-reference.
+  This is called by `org-cite-insert'."
+    (interactive (list (org-element-context) current-prefix-arg))
+
+      ;; I do this here in case you change the actions after loading this, so that
+      ;; it should be up to date.
+      (ivy-set-actions
+        'org-cite-insert org-ref-cite-alternate-insert-actions)
+
+      (cond
+        ;; the usual case where we insert a ref
+        ((null arg)
+        (bibtex-completion-init)
+        (let* ((bibtex-completion-bibliography (org-cite-list-bibliography-files))
+                (candidates (bibtex-completion-candidates)))
+        (ivy-read "BibTeX entries: " candidates
+                        :caller 'org-cite-insert
+                        :action (lambda (candidate)
+                                (org-ref-cite-insert-citation
+                                (cdr (assoc "=key=" (cdr candidate))) arg)))))
+
+        ;; Here you are either updating the style, or inserting a new ref with a
+        ;; selected style.
+        ((= (prefix-numeric-value  arg) 4)
+        (if context
+                (org-ref-cite-update-style)
+        (bibtex-completion-init)
+        (let* ((bibtex-completion-bibliography (org-cite-list-bibliography-files))
+                (candidates (bibtex-completion-candidates)))
+                (ivy-read "BibTeX entries: " candidates
+                        :caller 'org-cite-insert
+                        :action '(1
+                                ("i" (lambda (candidate)
+                                        (org-ref-cite-insert-citation
+                                        (cdr (assoc "=key=" (cdr candidate)))
+                                        current-prefix-arg)) "insert"))))))
+
+        ;; delete thing at point, either ref or citation
+        ((= (prefix-numeric-value  current-prefix-arg) 16)
+        (when (memq (org-element-type context) '(citation citation-reference))
+        (org-cite-delete-citation context)))))
+   )
+
+(defun bl/+org/dwim-at-point (&optional ARG)
+  "Add follow functions for `citation' and `citation-reference' on `RET'."
+  (interactive "P")
+  (if (button-at (point))
+      (call-interactively #'push-button)
+    (let* ((context (org-element-context))
+           (type (org-element-type context)))
+      (message "%s" context)
+      (message "%s" type)
+      (pcase type
+        (`citation-reference (org-cite-follow context ARG))
+        (`citation
+         (save-excursion
+           (goto-char (org-element-property :contents-begin context))
+           (bl/+org/dwim-at-point ARG)))
+        (_ 'nil)))))
+
+(defun bl/org-cite--add-bibliography-link (backend)
+  "If cite links appear in an org file, add a bibliography link so it shows up in export.
+
+We need to parse the buffer for this because we don't have access to the filename.
+
+Adds and extra headline (and css it make it invisible) before the bibliography
+so it is not hidden by the final headline being private."
+  (ignore backend)
+  ;; Get the top level org-roam node and see if it has a :ROAM_REFS:
+  (save-excursion
+    (goto-char (point-min))
+    (let* ((node (org-roam-node-at-point))
+           ;; TODO Handle cases where there are multiple :ROAM_REFS:
+           ;; (ref (when node (plist-get (car (org-roam-node-refs node)) :value)))
+           (ref (when node (car (org-roam-node-refs node))))
+           ;; Make sure we don't try to check a key when there isn't a :ROAM_REFS:
+           ;; TODO update to org-ref-cite tools?
+           (ref-lookup (when ref (org-ref-key-in-file-p ref (car org-cite-global-bibliography)))))
+      ;; Add a bibliography if we have cite links in the buffer or if the
+      ;; :ROAM_REF: is a cite-link
+      (when (or ref-lookup
+                (bl/org-ref--get-cite-links-from-buffer)
+                (bl/org-cite--get-citations-from-buffer))
+          (goto-char (bl/org-end-of-property-drawer (point-min)))
+          (newline)
+          ;; Add Extra CSS for a hidden cite link to this current paper.
+          (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.SELFLINK {display: none;}</style>\n")
+          ;; Add Extra CSS to hide the section number of the bibliography as the
+          ;; :title part isn't working.
+          (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY [class^=section-number-] {display: none;}</style>\n")
+          (goto-char (point-max))
+          ;; Add a new headline (which makes sure the bibliography is visible even if
+          ;; the last headline is private). Set the `HTML_CONTAINER_CLASS' property
+          ;; for this headling, this will cause the parent of the h2 tag (representing
+          ;; this headline) to have and extra class. We set this class to BIBLIOGRAPHY
+          ;; so the headline will be styled with display: none;
+          (insert "* Bibliography \n:PROPERTIES:\n:HTML_CONTAINER_CLASS: BIBLIOGRAPHY\n:END:\n")
+          (insert "#+print_bibliography: :numbered t\n")
+          (insert "* \n:PROPERTIES:\n:HTML_CONTAINER_CLASS: SELFLINK\n:END:\n")
+          ;; If the :ROAM_REFS: is present, add a new secret citelink (which is
+          ;; hidden with CSS) for it. This will force the bibliography to contain a
+          ;; reference to this paper (that the note is on). It will also trigger a
+          ;; bibliography if there are no other citelinks on the page.
+          (if ref-lookup (insert (format "[cite/t:@%s]\n" ref)))))))
 
 ;; Several of the next functions are designed to speed up agenda/todo collection
 ;; over my roam files by only searching ones that are marked with a
@@ -831,12 +920,14 @@ have to pick a template each time."
   (interactive)
   (org-element-map (org-element-parse-buffer) 'link 'bl/org--link-info))
 
+;; TODO Replace with org-ref-cite
 (defun bl/org-ref--split-link (link)
   "Split an org-ref link with multiple parts (paperA,paperB,...) into multiple links."
   (let* ((refs (org-ref-split-and-strip-string (plist-get link :path))))
      (seq-map (lambda (r) (plist-put (copy-tree link) :path r)) refs)
   ))
 
+;; TODO Replace with org-ref-cite
 (defun bl/org-ref--get-cite-links-from-buffer ()
   "Filter down to only the cite links, splitting multiple citation links.
 
@@ -859,45 +950,10 @@ at the returned point. I normally call `(newline)' before inserting."
         (+ end (length ":end:"))
       point)))
 
-(defun bl/org-ref--add-bibliography-link (backend)
-  "If cite links appear in an org file, add a bibliography link so it shows up in export.
+(defun bl/org-cite--get-citations-from-buffer ()
+  (interactive)
+  (org-element-map (org-element-parse-buffer) 'citation (lambda (x) x)))
 
-We need to parse the buffer for this because we don't have access to the filename.
-
-Adds and extra headline (and css it make it invisible) before the bibliography
-so it is not hidden by the final headline being private."
-  (ignore backend)
-  ;; Get the top level org-roam node and see if it has a :ROAM_REFS:
-  (save-excursion
-    (goto-char (point-min))
-    (let* ((node (org-roam-node-at-point))
-           ;; TODO Handle cases where there are multiple :ROAM_REFS:
-           (ref (when node (car (org-roam-node-refs node))))
-           ;; Make sure we don't try to check a key when there isn't a :ROAM_REFS:
-           (ref-lookup (when ref (org-ref-key-in-file-p ref (car org-ref-default-bibliography)))))
-        ;; Add a bibliography if we have cite links in the buffer or if the
-        ;; :ROAM_REF: is a cite-link
-        (when (or ref-lookup (bl/org-ref--get-cite-links-from-buffer))
-          (goto-char (bl/org-end-of-property-drawer (point-min)))
-          (newline)
-          ;; Add Extra CSS so that any h2 whose parent has the class BIBLIOGRAPHY is hidden.
-          (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY h2 {display: none;} {display: none;}</style>\n")
-          ;; Add Extra CSS for a hidden cite link to this current paper.
-          (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY a.org-ref-reference {display: none;}</style>\n")
-          (goto-char (point-max))
-          ;; Add a new headline (which makes sure the bibliography is visible even if
-          ;; the last headline is private). Set the `HTML_CONTAINER_CLASS' property
-          ;; for this headling, this will cause the parent of the h2 tag (representing
-          ;; this headline) to have and extra class. We set this class to BIBLIOGRAPHY
-          ;; so the headline will be styled with display: none;
-          (insert "* \n:PROPERTIES:\n:HTML_CONTAINER_CLASS: BIBLIOGRAPHY\n:END:\n")
-          ;; If the :ROAM_REFS: is present, add a new secret citelink (which is
-          ;; hidden with CSS) for it. This will force the bibliography to contain a
-          ;; reference to this paper (that the note is on). It will also trigger a
-          ;; bibliography if there are no other citelinks on the page.
-          (if ref-lookup (insert (format "cite:%s\n" ref)))
-          (insert (concat "bibliography:" (car org-ref-default-bibliography) "\n"))
-          (insert (concat "bibliographystyle:" org-ref--bibliography-style "\n"))))))
 
 (defun org-html-export-to-html-filename (filename &optional async subtreep visible-only body-only ext-plist)
   "Export an org mode file to html via filename."
@@ -1128,6 +1184,7 @@ exports to a superscript.
         (format "^{%s}" link)
         link)))
 
+;; TODO Update to work with org-cite links
 (defun bl/org-export--add-ref-note-links (backend)
   "Add links to notes from any cite link that has a note.
 
