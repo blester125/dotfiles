@@ -200,6 +200,11 @@ If &optional `force' is supplied, create the drawer if it does not exist."
         :prefix ("m" . "org-mode")
         :desc "Insert an inline TODO" "T" #'org-inlinetask-insert-task ;; Insert a TODO that doesn't trigger nesting.
         :desc "Insert an empty property drawer" "O" (lambda () (interactive) (org-insert-property-drawer)))
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((python . t)
+     (emacs-lisp . t)
+     (shell . t)))
   (setq org-src-fontify-natively 't)  ;; Use syntax highlighting for code blocks.
   ;; The available TODO states, the ones after the "|" are considered finished.
   (setq org-todo-keywords
