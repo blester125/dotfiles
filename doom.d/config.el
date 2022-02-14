@@ -45,7 +45,7 @@
   (visual-line-mode . visual-fill-column-mode))
 
 ;; The symbol used when you have an org header closed.
-(setq org-ellipsis " ⤵")
+(setq org-ellipsis " ↴")
 (setq projectile-project-search-path `(,(concat (getenv "HOME") "/dev")))
 
 ;; Doom exposes five (optional) variables for controlling fonts in Doom. Here
@@ -298,6 +298,7 @@ If &optional `force' is supplied, create the drawer if it does not exist."
   ;; conflict with our actual style sheet.
   (setq org-html-style-default 'nil)
   (setq org-html-head-include-default-style 'nil)
+  (setq org-export-headline-levels 7)
   ;; Create a derived backend based on the html backend so we can add new export
   ;; options to the menu, under the html selector.
   (org-export-define-derived-backend 'html-roam 'html
@@ -734,6 +735,21 @@ top-level is there are none in the file."
   ;; Add citation following on `RET'.
   (advice-add '+org/dwim-at-point :before-until 'bl/+org/dwim-at-point)
 
+  (setq org-ref-cite-alternate-insert-actions
+  '(("p" ivy-bibtex-open-pdf "Open PDF file (if present)")
+    ("u" ivy-bibtex-open-url-or-doi "Open URL or DOI in browser")
+    ;; this insert-citation only inserts an org-ref cite.
+    ;; ("c" ivy-bibtex-insert-citation "Insert citation")
+    ("r" ivy-bibtex-insert-reference "Insert reference")
+    ("k" ivy-bibtex-insert-key "Insert BibTeX key")
+    ("b" ivy-bibtex-insert-bibtex "Insert BibTeX entry")
+    ("a" ivy-bibtex-add-PDF-attachment "Attach PDF to email")
+    ("e" ivy-bibtex-edit-notes "Edit notes")
+    ("n" ivy-bibtex-edit-notes "Edit notes")
+    ("s" ivy-bibtex-show-entry "Show entry")
+    ("l" ivy-bibtex-add-pdf-to-library "Add PDF to library")
+    ("f" (lambda (_candidate) (ivy-bibtex-fallback ivy-text)) "Fallback options")))
+
   ;; Custom fork adding ":caller 'org-cite-insert" to fix formatting
   (defun org-ref-cite-insert-processor (context arg)
     "Function for inserting a citation.
@@ -784,6 +800,21 @@ top-level is there are none in the file."
         (org-cite-delete-citation context)))))
    )
 
+(use-package! org-roam-bibtex
+  :after org-roam
+  :hook (org-roam-mode . org-roam-bibtex-mode)
+  :config
+  (setq orb-insert-interface 'ivy-bibtex)
+  (setq orb-note-actions-interface 'ivy)
+  (setq orb-preformat-keywords
+        '("citekey" "title" "url" "file" "author-or-editor" "keywords" "ref"
+          "author-abbrev" "journal" "booktitle" "date" "year" "doi"))
+  (defvar orb-capture-templates `(("r" "bibliography note template" plain "%?"
+                                   :target (file+head "lit/${citekey}.org"
+                                                      ,lit-note-template)
+                                   :unnarrowed t)) "Capture when making a lit note")
+  )
+
 (defun bl/+org/dwim-at-point (&optional ARG)
   "Add follow functions for `citation' and `citation-reference' on `RET'."
   (interactive "P")
@@ -831,7 +862,10 @@ so it is not hidden by the final headline being private."
           ;; Add Extra CSS to hide the section number of the bibliography as the
           ;; :title part isn't working.
           (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY [class^=section-number-] {display: none;}</style>\n")
+          ;; Add Extra CSS to add a bit of space between entries.
+          (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.csl-entry {padding-top: 10px;}</style>\n")
           (goto-char (point-max))
+          (newline)
           ;; Add a new headline (which makes sure the bibliography is visible even if
           ;; the last headline is private). Set the `HTML_CONTAINER_CLASS' property
           ;; for this headling, this will cause the parent of the h2 tag (representing
@@ -1417,7 +1451,7 @@ function to be run often, just when you are initializing a new computer.
 (use-package! mixed-pitch
   ;; Hooking org-roam-bibtex-mode is the easiest way to get mixed pitch in the
   ;; roam backlink buffer lol.
-  :hook ((org-mode org-roam-bibtex-mode markdown-mode) . mixed-pitch-mode)
+  :hook ((org-mode evil-org-mode org-roam-bibtex-mode markdown-mode) . mixed-pitch-mode)
   :config
   (setq mixed-pitch-set-height 't))
 
@@ -1441,5 +1475,9 @@ function to be run often, just when you are initializing a new computer.
         org-pomodoro-long-break-length 40
         org-pomodoro-long-break-frequency 4)
   (add-hook! 'org-clock-in-hook (setq global-mode-string (delete 'org-mode-line-string global-mode-string))))
+
+(use-package! org-fragtog
+  :after org
+  :hook (org-mode . org-fragtog-mode))
 
 (when WORK (load (concat doom-private-dir "work-config.el")))
