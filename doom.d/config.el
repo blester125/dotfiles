@@ -204,7 +204,8 @@ If &optional `force' is supplied, create the drawer if it does not exist."
    'org-babel-load-languages
    '((python . t)
      (emacs-lisp . t)
-     (shell . t)))
+     (shell . t)
+     (scheme . t)))
   (setq org-src-fontify-natively 't)  ;; Use syntax highlighting for code blocks.
   ;; The available TODO states, the ones after the "|" are considered finished.
   (setq org-todo-keywords
@@ -494,6 +495,8 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
   (advice-add 'org-todo-list :before #'bl/update-agenda-files)
   ;; Use my custom function which removes some tags (like TODO) when searching for nodes.
   (advice-add 'org-roam-node-doom-tags :filter-return 'bl/org-roam-node-doom-tags)
+  ;; Stop org-roam from prepending # to my tags, looks bad.
+  (setq org-roam-node-template-prefixes (delete '("doom-tags" . "#") org-roam-node-template-prefixes))
   (advice-add 'org-roam-node-doom-hierarchy :filter-return 'bl/org-roam-node-doom-hierarchy)
   (setq org-roam-dailies-directory "journal/")
   (setq org-roam-dailies-capture-templates
@@ -536,11 +539,22 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
       (insert (org-link-make-string (concat "id:" (org-roam-capture--get :id))
                                     (org-roam-capture--get :link-description))))))
   (advice-add 'org-roam-capture--finalize-insert-link :override 'bl/org-roam-capture--finalize-insert-link)
+  (advice-add 'org-roam-node-read--to-candidate :override 'bl/org-roam-node-read--to-candidate)
+  ;; TODO(brianlester): This is broken again :/
   ;; Fix coloring in org-roam ivy search as ivy doesn't handle having candidates
   ;; with a display text property.
   (advice-add 'org-roam-node-find :around 'bl/org-roam-search-highlighting)
   (advice-add 'org-roam-node-insert :around 'bl/org-roam-search-highlighting)
   (advice-add 'org-roam-capture :around 'bl/org-roam-search-highlighting))
+
+(defun bl/org-roam-node-read--to-candidate (node template)
+  "Return a minibuffer completion candidate given NODE.
+TEMPLATE is the processed template used to format the entry."
+  (let ((candidate-main (org-roam-node--format-entry
+                         template
+                         node
+                         (1- (frame-width)))))
+    (cons (propertize candidate-main 'node node) node)))
 
 ;; Proper highlighting in org-roam search
 (defun bl/map-text-properties (str prop fun)
@@ -588,15 +602,15 @@ Removes any tag in tags (which is formatted as an org tag string) that are prese
 in `org-roam-find-file--ignore-tags'
 
 Applies the `shadow' face as a property, like the default doom-tags does."
-  (let* ((tags (split-string tags ":" 't))
-         ;; Remove dups in-case the directory tag inference is the same as explicit tags.
-         (tags (delete-dups (seq-remove (lambda (elt) (member elt org-roam-find-file--ignore-tags)) tags))))
-    (propertize (org-make-tag-string tags) 'face 'shadow)))
+  (when tags
+    ;; Remove dups in-case the directory tag inference is the same as explicit tags.
+    (let ((tags (delete-dups (seq-remove (lambda (elt) (member elt org-roam-find-file--ignore-tags)) tags))))
+      (propertize (org-make-tag-string tags) 'face 'shadow))))
 
 (defun bl/org-roam-node-doom-hierarchy (hierarchy)
   "Flip the doom hierarchy of nodes so the child heading is first."
-  (let ((splitter " > ")
-        (joiner (propertize " < " 'face 'shadow)))
+  (let ((splitter " → ")
+        (joiner (propertize " « " 'face 'shadow)))
     (string-join (reverse (split-string-and-unquote hierarchy splitter)) joiner)))
 
 (defun bl/org-roam--counsel-rg (&optional INITIAL-INPUT)
@@ -717,6 +731,7 @@ top-level is there are none in the file."
   (set-face-attribute 'org-cite nil :foreground "DarkSeaGreen4")
   (set-face-attribute 'org-cite-key nil :foreground "forest green")
   (setq
+   org-ref-cite-default-style ""
    org-cite-global-bibliography (list bibtex-completion-bibliography)
    org-cite-csl-styles-dir (concat notes "csl-styles")
    org-cite-insert-processor 'org-ref-cite
@@ -1021,7 +1036,7 @@ at the returned point. I normally call `(newline)' before inserting."
         (condition-case err
             (org-html-export-to-html async subtreep visible-only body-only ext-plist)
           (error
-           (message "%s filed to export" fullname)
+           (message "%s failed to export" fullname)
            (message "%s" (error-message-string err))))))))
 
 (defun bl/org-roam--id-link-to-file (link)
