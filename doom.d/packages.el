@@ -50,13 +50,15 @@
 
 (package! flyspell)
 (package! evil-commentary)
-(package! org-ref)
-(package! ivy-bibtex)
+;; (package! org-ref)
+;; (package! ivy-bibtex)
 (package! org-roam-bibtex
   :recipe (:host github :repo "org-roam/org-roam-bibtex"))
 (unpin! org-roam)
-(unpin! ivy)
-(unpin! bibtex-completion ivy-bibtex)
+;; (unpin! ivy)
+(unpin! org-fancy-priorities)
+;; (unpin! bibtex-completion ivy-bibtex)
+(unpin! magit)
 
 (package! visual-fill-column)
 ;; Configure org-download manually because I was having trouble getting it to work
@@ -71,6 +73,6 @@
 (when WORK (load (concat doom-private-dir "work-packages.el")))
 
 (package! citeproc)
-(package! org-ref-cite-core :recipe (:host github :repo "jkitchin/org-ref-cite"))
-(package! org-ref-cite :recipe (:host github :repo "jkitchin/org-ref-cite"))
+;; (package! org-ref-cite-core :recipe (:host github :repo "jkitchin/org-ref-cite"))
+;; (package! org-ref-cite :recipe (:host github :repo "jkitchin/org-ref-cite"))
 (package! org-fragtog)

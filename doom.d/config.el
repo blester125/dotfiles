@@ -100,7 +100,7 @@
       (flyspell-do-correct 'save nil (car word) current-location (cadr word) (caddr word) current-location)))
   )
 
-;; use zg in normal mode to save a word to my dictonary like I do in vim
+;; use zg in normal mode to save a word to my dictionary like I do in vim
 (map! :n "z g" 'bl/save-word)
 
 ;; It isn't a perfect match but use python highlighting when editing gin config files.
@@ -200,6 +200,24 @@ If &optional `force' is supplied, create the drawer if it does not exist."
         :prefix ("m" . "org-mode")
         :desc "Insert an inline TODO" "T" #'org-inlinetask-insert-task ;; Insert a TODO that doesn't trigger nesting.
         :desc "Insert an empty property drawer" "O" (lambda () (interactive) (org-insert-property-drawer)))
+  ;; Insert a zero-width space to separate markup from punctuation
+  (map! :map org-mode-map
+        :nie "C-M-SPC" (cmd! (insert "\u200B")))
+  (appendq! +ligatures-extra-symbols
+            `(:em_dash       "—"
+              :list_property "∷"
+              :begin_quote   "❝"
+              :end_quote     "❞"
+              :caption       "☰"
+              :results       "🠶"
+              :ellipses      "…"))
+  (set-ligatures! 'org-mode
+    :merge t
+    :em_dash       "---"
+    :list_property "::"
+    :caption       "#+caption:"
+    :results       "#+RESULTS:"
+    :ellipsis      "...")
   (org-babel-do-load-languages
    'org-babel-load-languages
    '((python . t)
@@ -270,6 +288,7 @@ If &optional `force' is supplied, create the drawer if it does not exist."
 (use-package! ox
   :after org
   :config
+  ;; TODO(brianlester): Fork this css and move my in html hacks into the css.
   (defvar org--css-location "https://gongzhitaao.org/orgcss/org.css" "The location where the CSS stylesheet we use for org-mode html exports lives.")
   ;; Use hook to add a css header to the file before exporting it.
   (add-hook! 'org-export-before-parsing-hook #'bl/org--add-css-header)
@@ -356,13 +375,17 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
   (goto-char (bl/org-end-of-property-drawer (point-min)))
   (newline)
   (insert (format "#+html_head: <link rel=\"stylesheet\" type=\"text/css\" href=\"%s\"/>\n" org--css-location))
+  ;; TODO(brianlester) Move these CSS hacks into an actual style sheet.
   ;; When we moved to org-roam v2, a lot more things have ids and some things that
   ;; normally are turned into a `<figure>' tag are now a div with `class=figure'.
   ;; The CSS i got off the internet isn't setup to handle that. Patch it for now
   ;; to center figures on export, but look into writing own CSS soon. Need a
   ;; better background color, or maybe use dark mode?
   (insert "#+html_head_extra: <style>.figure p {text-align: center;}</style>\n")
-  (insert "#+html_head_extra: <style>*{font-family: etbook !important}</style>\n"))
+  ;; Use the etbook font everywhere
+  (insert "#+html_head_extra: <style>*{font-family: etbook !important}</style>\n")
+  ;; Use allow link coloring to show through code snippets.
+  (insert "#+html_head_extra: <style>a>code {color: inherit;}</style>\n"))
 
 (defun bl/org-inherited-priority (header)
   "Search parent headings to allow of inheritence of priority."
@@ -429,7 +452,8 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
     (apply #'org-roam-node-insert args)))
 
 ;; A Zettelkasten in org mode, the reason I switched
-(after! org-roam
+(use-package! org-roam
+  :config
   (org-roam-db-autosync-mode)
   (map! :leader
         (:prefix ("r" . "roam")
@@ -439,9 +463,12 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
          :desc "Find an org-roam file, create if not found" "f" #'org-roam-node-find
          :desc "Show the org-roam graph" "g" #'org-roam-graph
          :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
-         :desc "Get notes on a biblographic entry" "r" 'org-cite-insert
          :desc "Search notes" "s" 'bl/org-roam--counsel-rg
          :desc "Convert Headline into a Node" "n" (lambda () (interactive) (org-id-get-create)(save-buffer))
+         (:prefix ("r" . "research")
+          :desc "Cite a bibliographic entry" "c" 'org-cite-insert
+          :desc "Get notes on a bibliographic entry" "n" 'citar-open-notes
+          :desc "Search notes on bibliographic entries" "s" 'bl/org-roam-lit--counsel-rg)
          (:prefix ("a" . "add")
           :desc "Add a tag to the node" "t" 'org-roam-tag-add
           :desc "Add a ref to the node" "r" 'org-roam-ref-add
@@ -509,6 +536,17 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
            :target (file+head+olp "%<%Y-%m-%d>.org"
                                   "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview inlineimages\n#+filetags: :journal:\n"
                                   ("Journal")))))
+  (defvar bl/blank-org-roam-dailies-capture-templates
+        '(("d" "default" entry
+           ""
+           ;; By setting `olp' (OutLine Path) we can have all entries be
+           ;; inserted after that path. This lets us keep a top level header and
+           ;; have journal entries be second level, which is consistent with old
+           ;; notes, and just nicer to look at.
+           :target (file+head+olp "%<%Y-%m-%d>.org"
+                                  "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview inlineimages\n#+filetags: :journal:\n"
+                                  ("Journal"))))
+        "A version of the daily template with nothing to fill as a goto hack")
   (map! :leader
         :prefix ("j" . "journal")
         :desc "Capture a new entry for today's note" "c" 'org-roam-dailies-capture-today
@@ -538,6 +576,27 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
         (set-marker (cdr region) nil))
       (insert (org-link-make-string (concat "id:" (org-roam-capture--get :id))
                                     (org-roam-capture--get :link-description))))))
+
+  ;; Hacks to deal with goto triggering a template fill.
+  (defvar bl/blank-org-roam-dailies-capture-templates
+        '(("d" "default" entry
+           ""
+           ;; By setting `olp' (OutLine Path) we can have all entries be
+           ;; inserted after that path. This lets us keep a top level header and
+           ;; have journal entries be second level, which is consistent with old
+           ;; notes, and just nicer to look at.
+           :target (file+head+olp "%<%Y-%m-%d>.org"
+                                  "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview inlineimages\n#+filetags: :journal:\n"
+                                  ("Journal"))))
+        "A version of the daily template with nothing to fill as a goto hack")
+  (defun bl/org-roam-dailies-goto-template-patch (fun &rest args)
+    (let ((org-roam-dailies-capture-templates bl/blank-org-roam-dailies-capture-templates))
+      (apply fun args)))
+  (advice-add 'org-roam-dailies-goto-today :around 'bl/org-roam-dailies-goto-template-patch)
+  (advice-add 'org-roam-dailies-goto-yesterday :around 'bl/org-roam-dailies-goto-template-patch)
+  (advice-add 'org-roam-dailies-goto-tomorrow :around 'bl/org-roam-dailies-goto-template-patch)
+  (advice-add 'org-roam-dailies-goto-date :around 'bl/org-roam-dailies-goto-template-patch)
+
   (advice-add 'org-roam-capture--finalize-insert-link :override 'bl/org-roam-capture--finalize-insert-link)
   (advice-add 'org-roam-node-read--to-candidate :override 'bl/org-roam-node-read--to-candidate)
   ;; TODO(brianlester): This is broken again :/
@@ -629,6 +688,14 @@ Applies the `shadow' face as a property, like the default doom-tags does."
   ;; it is case-insensitive, but adding an upper case makes it case-sensative
   (counsel-rg INITIAL-INPUT (expand-file-name org-roam-dailies-directory org-roam-directory) "--type org" "org-roam-journal search: "))
 
+(defun bl/org-roam-lit--counsel-rg (&optional INITIAL-INPUT)
+  "Full text search with counsel-rg (using ripgrep) specific to searching my journal."
+  (interactive)
+  ;; Only search org files in the zettelkasten. We also set the prompt to be more informative.
+  ;; Note: It uses smart casing search. This means when your search uses lowercase
+  ;; it is case-insensitive, but adding an upper case makes it case-sensative
+  (counsel-rg INITIAL-INPUT lit "--type org" "org-roam-lit search: "))
+
 (defvar bl/org-roam-create-closest-node-from-search ""
   "When inserting an org-roam link from a `rg' search, create a node on the closet headline. When nil, use the first org-roam node you find.")
 
@@ -693,159 +760,70 @@ top-level is there are none in the file."
                                   ":roam_refs: @${=key=}\n"
                                   ":end:\n"
                                   "#+title: ${title}\n"
-                                  "#+setup: latexpreview inlineimages\n")
+                                  "#+setup: latexpreview inlineimages\n"
+                                  "#+category: Lit\n\n")
 "The template for creating a new Literature Note.")
 
-(use-package! ivy-bibtex
-  :after ivy
-  :config
-  (setq
-   bibtex-completion-notes-path lit
-   bibtex-completion-bibliography bib
-   bibtex-completion-pdf-field "file"
-   bibtex-completion-pdf-symbol "⌘"
-   bibtex-completion-notes-symbol "✎"
-   bibtex-completion-additional-search-fields '(keywords)
-   bibtex-completion-notes-template-multiple-files lit-note-template
-   bibtex-completion-display-formats
-   '((t . "${=has-pdf=:1}${=has-note=:1} ${year:4} ${author:36} ${title:*}"))
-  )
-)
-
-;; Stop org-ref from adding keywords to the search template
-(setq org-ref-bibtex-completion-add-keywords-field 'nil)
-
 (use-package! oc
-  :after org)
+  :after org
+  :config
+  (setq org-cite-csl-styles-dir (concat notes "csl-styles"))
+  (setq org-cite-global-bibliography (list bib)))
 
 (use-package! oc-csl
-  :after org)
+  :after oc
+  :config
+  (setq org-cite-export-processors '((html csl "association-for-computational-linguistics.csl")
+                                     (latex org-ref-cite)
+                                     (t basic))))
 
 (use-package! citeproc
   :after oc-csl)
 
-;; TODO Unify options and menu for actions between Spc-r-r and RET on a cite link
-;; TODO Figure out how to lazy load without missing link coloring
-(use-package! org-ref-cite
+(after! citar
   :config
   (set-face-attribute 'org-cite nil :foreground "DarkSeaGreen4")
   (set-face-attribute 'org-cite-key nil :foreground "forest green")
-  (setq
-   org-ref-cite-default-style ""
-   org-cite-global-bibliography (list bibtex-completion-bibliography)
-   org-cite-csl-styles-dir (concat notes "csl-styles")
-   org-cite-insert-processor 'org-ref-cite
-   org-cite-follow-processor 'org-ref-cite
-   org-cite-activate-processor 'org-ref-cite
-   org-cite-export-processors '((html csl "association-for-computational-linguistics.csl")
-                                (latex org-ref-cite)
-                                (t basic)))
-  (ivy-set-display-transformer 'org-cite-insert 'ivy-bibtex-display-transformer)
-  ;; Add a bibliography link to files that have cite links.
-  (add-hook! 'org-export-before-parsing-hook #'bl/org-cite--add-bibliography-link)
-  ;; TODO Update this to work with org-cite
+  (setq citar-bibliography bib)
+  (setq citar-notes-paths (list lit))
+  (setq citar-symbols
+    `((file ,(all-the-icons-faicon "file-o" :face 'all-the-icons-green :v-adjust -0.1) . " ")
+      (note ,(all-the-icons-material "speaker_notes" :face 'all-the-icons-blue :v-adjust -0.3) . " ")
+      (link ,(all-the-icons-octicon "link" :face 'all-the-icons-orange :v-adjust 0.01) . " ")))
+  (setq citar-symbol-separator "  ")
+  (setq citar-at-point-function 'embark-act)
+  (setq citar-templates
+    '((main . "${date year issued:4}  ${author editor:40}      ${title:*}")
+      (suffix . "          ${=key= id:15}    ${=type=:12}    ${tags keywords:*}")
+      (preview . "${author editor} (${year issued date}) ${title}, ${journal journaltitle publisher container-title collection-title}.\n")
+      (note . "Notes on ${author editor}, ${title}")))
+  (add-hook! 'org-export-before-parsing-hook #'bl/org-cite--add-bibliography-link))
   ;; Make sure we don't byte complie this function (`#'), we need to read the
   ;; value of `default-directory' which might change.
-  (add-hook! 'org-export-before-parsing-hook 'bl/org-export--add-ref-note-links)
-  ;; Add citation following on `RET'.
-  (advice-add '+org/dwim-at-point :before-until 'bl/+org/dwim-at-point)
+  ;; (add-hook! 'org-export-before-parsing-hook 'bl/org-export--add-ref-note-links)
 
-  (setq org-ref-cite-alternate-insert-actions
-  '(("p" ivy-bibtex-open-pdf "Open PDF file (if present)")
-    ("u" ivy-bibtex-open-url-or-doi "Open URL or DOI in browser")
-    ;; this insert-citation only inserts an org-ref cite.
-    ;; ("c" ivy-bibtex-insert-citation "Insert citation")
-    ("r" ivy-bibtex-insert-reference "Insert reference")
-    ("k" ivy-bibtex-insert-key "Insert BibTeX key")
-    ("b" ivy-bibtex-insert-bibtex "Insert BibTeX entry")
-    ("a" ivy-bibtex-add-PDF-attachment "Attach PDF to email")
-    ("e" ivy-bibtex-edit-notes "Edit notes")
-    ("n" ivy-bibtex-edit-notes "Edit notes")
-    ("s" ivy-bibtex-show-entry "Show entry")
-    ("l" ivy-bibtex-add-pdf-to-library "Add PDF to library")
-    ("f" (lambda (_candidate) (ivy-bibtex-fallback ivy-text)) "Fallback options")))
+;; Stop org-ref from adding keywords to the search template
+;; (setq org-ref-bibtex-completion-add-keywords-field 'nil)
 
-  ;; Custom fork adding ":caller 'org-cite-insert" to fix formatting
-  (defun org-ref-cite-insert-processor (context arg)
-    "Function for inserting a citation.
-
-  With one prefix ARG, set style
-  With two prefix ARG delete reference/cite at point.
-  Argument CONTEXT is an org element at point, usually a citation
-    or citation-reference.
-  This is called by `org-cite-insert'."
-    (interactive (list (org-element-context) current-prefix-arg))
-
-      ;; I do this here in case you change the actions after loading this, so that
-      ;; it should be up to date.
-      (ivy-set-actions
-        'org-cite-insert org-ref-cite-alternate-insert-actions)
-
-      (cond
-        ;; the usual case where we insert a ref
-        ((null arg)
-        (bibtex-completion-init)
-        (let* ((bibtex-completion-bibliography (org-cite-list-bibliography-files))
-                (candidates (bibtex-completion-candidates)))
-        (ivy-read "BibTeX entries: " candidates
-                        :caller 'org-cite-insert
-                        :action (lambda (candidate)
-                                (org-ref-cite-insert-citation
-                                (cdr (assoc "=key=" (cdr candidate))) arg)))))
-
-        ;; Here you are either updating the style, or inserting a new ref with a
-        ;; selected style.
-        ((= (prefix-numeric-value  arg) 4)
-        (if context
-                (org-ref-cite-update-style)
-        (bibtex-completion-init)
-        (let* ((bibtex-completion-bibliography (org-cite-list-bibliography-files))
-                (candidates (bibtex-completion-candidates)))
-                (ivy-read "BibTeX entries: " candidates
-                        :caller 'org-cite-insert
-                        :action '(1
-                                ("i" (lambda (candidate)
-                                        (org-ref-cite-insert-citation
-                                        (cdr (assoc "=key=" (cdr candidate)))
-                                        current-prefix-arg)) "insert"))))))
-
-        ;; delete thing at point, either ref or citation
-        ((= (prefix-numeric-value  current-prefix-arg) 16)
-        (when (memq (org-element-type context) '(citation citation-reference))
-        (org-cite-delete-citation context)))))
-   )
+(defun bl/orb-templates (fun &rest args)
+  "Update org roam capture templates to just be the orb ones for orb calls."
+  (let ((org-roam-capture-templates orb-capture-templates))
+    (apply fun args)))
 
 (use-package! org-roam-bibtex
   :after org-roam
-  :hook (org-roam-mode . org-roam-bibtex-mode)
   :config
-  (setq orb-insert-interface 'ivy-bibtex)
-  (setq orb-note-actions-interface 'ivy)
+  (require 'citar)
+  (setq bibtex-completion-bibliography bib)
+  (setq citar-open-note-function 'orb-citar-edit-note)
   (setq orb-preformat-keywords
         '("citekey" "title" "url" "file" "author-or-editor" "keywords" "ref"
-          "author-abbrev" "journal" "booktitle" "date" "year" "doi"))
+          "author-abbrev" "journal" "booktitle" "date" "year" "doi" "=key="))
   (defvar orb-capture-templates `(("r" "bibliography note template" plain "%?"
                                    :target (file+head "lit/${citekey}.org"
                                                       ,lit-note-template)
                                    :unnarrowed t)) "Capture when making a lit note")
-  )
-
-(defun bl/+org/dwim-at-point (&optional ARG)
-  "Add follow functions for `citation' and `citation-reference' on `RET'."
-  (interactive "P")
-  (if (button-at (point))
-      (call-interactively #'push-button)
-    (let* ((context (org-element-context))
-           (type (org-element-type context)))
-      (message "%s" context)
-      (message "%s" type)
-      (pcase type
-        (`citation-reference (org-cite-follow context ARG))
-        (`citation
-         (save-excursion
-           (goto-char (org-element-property :contents-begin context))
-           (bl/+org/dwim-at-point ARG)))
-        (_ 'nil)))))
+  (advice-add 'orb-edit-note :around 'bl/orb-templates))
 
 (defun bl/org-cite--add-bibliography-link (backend)
   "If cite links appear in an org file, add a bibliography link so it shows up in export.
@@ -1494,5 +1472,7 @@ function to be run often, just when you are initializing a new computer.
 (use-package! org-fragtog
   :after org
   :hook (org-mode . org-fragtog-mode))
+
+(setq +ligatures-extras-in-modes '('not 'python-mode))
 
 (when WORK (load (concat doom-private-dir "work-config.el")))
