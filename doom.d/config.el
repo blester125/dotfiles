@@ -89,20 +89,6 @@
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented
 
-(defun bl/save-word ()
-  "Add a word to your personal dictionary so it doesn't get marked as an error in the future.
-
-  Taken from flyspell.el"
-  (interactive)
-  (let  ((current-location (point))
-         (word (flyspell-get-word)))
-    (when (consp word)
-      (flyspell-do-correct 'save nil (car word) current-location (cadr word) (caddr word) current-location)))
-  )
-
-;; use zg in normal mode to save a word to my dictionary like I do in vim
-(map! :n "z g" 'bl/save-word)
-
 ;; It isn't a perfect match but use python highlighting when editing gin config files.
 (add-to-list 'auto-mode-alist '("\\.gin$" . python-mode))
 
@@ -120,10 +106,6 @@
       ;; Otherwise eval the default. Lisp will return the last value eval, there is no return statement
       default)))
 
-;; Configuring spell checking which I def need lol
-(add-hook! 'text-mode-hook 'flyspell-mode)
-(add-hook! 'prog-mode-hook 'flyspell-prog-mode)
-
 ;; Update the value of `_' in the syntax table so evil mode commands like `w' will not stop on this symbol, lets you manipulate a whole variable
 (add-hook! 'python-mode-hook (modify-syntax-entry ?_ "w"))
 
@@ -137,7 +119,7 @@
   ;; Save with `:W' too because I am heavy on shift
   (evil-ex-define-cmd "W[RITE]" 'evil-write))
 
-;; Ivy the selection library via fuzzy matching I use
+;; Ivy the selection library used by org-roam
 (after! ivy
   (setq ivy-count-format "(%d/%d) ") ;; Have ivy show the index and count
   (setq ivy-use-virtual-buffers "recentf") ;; Have ivy include recently opened files in the switch buffer menu
@@ -454,29 +436,29 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
 ;; A Zettelkasten in org mode, the reason I switched
 (use-package! org-roam
   :config
-  (org-roam-db-autosync-mode)
   (map! :leader
         (:prefix ("r" . "roam")
          :desc "Open org-roam backlink panel" "l" #'org-roam-buffer-toggle
-         :desc "Insert a new org-roam link" "i" #'org-roam-node-insert
-         :desc "Insert a new org-roam link, create with template if missing" "I" #'org-roam-node-insert-immediate
-         :desc "Find an org-roam file, create if not found" "f" #'org-roam-node-find
-         :desc "Show the org-roam graph" "g" #'org-roam-graph
-         :desc "Use a capture to add a new org-roam note" "c" #'org-roam-capture
-         :desc "Search notes" "s" 'bl/org-roam--counsel-rg
-         :desc "Convert Headline into a Node" "n" (lambda () (interactive) (org-id-get-create)(save-buffer))
+         :desc "(i)nsert a new org-roam link" "i" #'org-roam-node-insert
+         :desc "(I)nsert a new org-roam link, create with template if missing" "I" #'org-roam-node-insert-immediate
+         :desc "(f)ind an org-roam file, create if not found" "f" #'org-roam-node-find
+         :desc "Show the org-roam (g)raph" "g" #'org-roam-graph
+         :desc "(c)apture a new org-roam note" "c" #'org-roam-capture
+         :desc "(s)earch notes" "s" 'bl/org-roam--counsel-rg
+         :desc "(n)ew Node by converting an org headline" "n" (lambda () (interactive) (org-id-get-create)(save-buffer))
          (:prefix ("r" . "research")
-          :desc "Cite a bibliographic entry" "c" 'org-cite-insert
-          :desc "Get notes on a bibliographic entry" "n" 'citar-open-notes
-          :desc "Search notes on bibliographic entries" "s" 'bl/org-roam-lit--counsel-rg)
+          :desc "(c)ite a bibliographic entry" "c" 'org-cite-insert
+          :desc "open (n)otes on a bibliographic entry" "n" 'citar-open-notes
+          :desc "(s)earch notes on bibliographic entries" "s" 'bl/org-roam-lit--counsel-rg
+          :desc "re(l)oad BibTeX (run when refs.bib is updated)" "l" 'citar-refresh)
          (:prefix ("a" . "add")
-          :desc "Add a tag to the node" "t" 'org-roam-tag-add
-          :desc "Add a ref to the node" "r" 'org-roam-ref-add
-          :desc "Add an alias to the node" "a" 'org-roam-alias-add)
+          :desc "Add a (t)ag to the node" "t" 'org-roam-tag-add
+          :desc "Add a (r)ef to the node" "r" 'org-roam-ref-add
+          :desc "Add an (a)lias to the node" "a" 'org-roam-alias-add)
          (:prefix ("d" . "delete")
-          :desc "Remove a tag from the node" "t" 'org-roam-tag-remove
-          :desc "Remove a ref from the node" "r" 'org-roam-ref-remove
-          :desc "Remove an alias from the node" "a" 'org-roam-alias-remove)))
+          :desc "Remove a (t)ag from the node" "t" 'org-roam-tag-remove
+          :desc "Remove a (r)ef from the node" "r" 'org-roam-ref-remove
+          :desc "Remove an (a)lias from the node" "a" 'org-roam-alias-remove)))
   ;; The default text that is populated in a new org-roam note. We define a single
   ;; template so we don't have to select between them.
   (setq org-roam-capture-templates
@@ -524,6 +506,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
   (advice-add 'org-roam-node-doom-tags :filter-return 'bl/org-roam-node-doom-tags)
   ;; Stop org-roam from prepending # to my tags, looks bad.
   (setq org-roam-node-template-prefixes (delete '("doom-tags" . "#") org-roam-node-template-prefixes))
+  ;; Convert the doom hierarchy formatting to my better looking one.
   (advice-add 'org-roam-node-doom-hierarchy :filter-return 'bl/org-roam-node-doom-hierarchy)
   (setq org-roam-dailies-directory "journal/")
   (setq org-roam-dailies-capture-templates
@@ -536,6 +519,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
            :target (file+head+olp "%<%Y-%m-%d>.org"
                                   "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview inlineimages\n#+filetags: :journal:\n"
                                   ("Journal")))))
+  ;; Hacks to deal with goto triggering a template fill.
   (defvar bl/blank-org-roam-dailies-capture-templates
         '(("d" "default" entry
            ""
@@ -547,6 +531,14 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
                                   "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview inlineimages\n#+filetags: :journal:\n"
                                   ("Journal"))))
         "A version of the daily template with nothing to fill as a goto hack")
+  (defun bl/org-roam-dailies-goto-template-patch (fun &rest args)
+    (let ((org-roam-dailies-capture-templates bl/blank-org-roam-dailies-capture-templates))
+      (apply fun args)))
+  (advice-add 'org-roam-dailies-goto-today :around 'bl/org-roam-dailies-goto-template-patch)
+  (advice-add 'org-roam-dailies-goto-yesterday :around 'bl/org-roam-dailies-goto-template-patch)
+  (advice-add 'org-roam-dailies-goto-tomorrow :around 'bl/org-roam-dailies-goto-template-patch)
+  (advice-add 'org-roam-dailies-goto-date :around 'bl/org-roam-dailies-goto-template-patch)
+
   (map! :leader
         :prefix ("j" . "journal")
         :desc "Capture a new entry for today's note" "c" 'org-roam-dailies-capture-today
@@ -577,34 +569,8 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
       (insert (org-link-make-string (concat "id:" (org-roam-capture--get :id))
                                     (org-roam-capture--get :link-description))))))
 
-  ;; Hacks to deal with goto triggering a template fill.
-  (defvar bl/blank-org-roam-dailies-capture-templates
-        '(("d" "default" entry
-           ""
-           ;; By setting `olp' (OutLine Path) we can have all entries be
-           ;; inserted after that path. This lets us keep a top level header and
-           ;; have journal entries be second level, which is consistent with old
-           ;; notes, and just nicer to look at.
-           :target (file+head+olp "%<%Y-%m-%d>.org"
-                                  "#+title: %<%A, %d %B %Y>\n#+setup: latexpreview inlineimages\n#+filetags: :journal:\n"
-                                  ("Journal"))))
-        "A version of the daily template with nothing to fill as a goto hack")
-  (defun bl/org-roam-dailies-goto-template-patch (fun &rest args)
-    (let ((org-roam-dailies-capture-templates bl/blank-org-roam-dailies-capture-templates))
-      (apply fun args)))
-  (advice-add 'org-roam-dailies-goto-today :around 'bl/org-roam-dailies-goto-template-patch)
-  (advice-add 'org-roam-dailies-goto-yesterday :around 'bl/org-roam-dailies-goto-template-patch)
-  (advice-add 'org-roam-dailies-goto-tomorrow :around 'bl/org-roam-dailies-goto-template-patch)
-  (advice-add 'org-roam-dailies-goto-date :around 'bl/org-roam-dailies-goto-template-patch)
-
   (advice-add 'org-roam-capture--finalize-insert-link :override 'bl/org-roam-capture--finalize-insert-link)
-  (advice-add 'org-roam-node-read--to-candidate :override 'bl/org-roam-node-read--to-candidate)
-  ;; TODO(brianlester): This is broken again :/
-  ;; Fix coloring in org-roam ivy search as ivy doesn't handle having candidates
-  ;; with a display text property.
-  (advice-add 'org-roam-node-find :around 'bl/org-roam-search-highlighting)
-  (advice-add 'org-roam-node-insert :around 'bl/org-roam-search-highlighting)
-  (advice-add 'org-roam-capture :around 'bl/org-roam-search-highlighting))
+  (advice-add 'org-roam-node-read--to-candidate :override 'bl/org-roam-node-read--to-candidate))
 
 (defun bl/org-roam-node-read--to-candidate (node template)
   "Return a minibuffer completion candidate given NODE.
@@ -614,45 +580,6 @@ TEMPLATE is the processed template used to format the entry."
                          node
                          (1- (frame-width)))))
     (cons (propertize candidate-main 'node node) node)))
-
-;; Proper highlighting in org-roam search
-(defun bl/map-text-properties (str prop fun)
-  "Apply `fun' to all text properties of type `prop' in `str'.
-
-If the output of `fun', called on the property value is `nil', the property is removed."
-  (let ((start 0)
-        (len (length str)))
-    (while (and start (< start len))
-      (let ((end (or (next-single-property-change start prop str) len)))
-        (when-let ((value (get-text-property start prop str)))
-          (let ((updated-value (funcall fun value)))
-            (if updated-value
-                (put-text-property start end prop updated-value str)
-              (remove-text-properties start end (list prop 'nil) str))))
-        (setq start end)))
-    str))
-
-(defun bl/remove-ivy-faces (value)
-  "Remove any face added by `ivy' for value."
-  (if (listp value)
-      (seq-remove (lambda (v) (memq v ivy-minibuffer-faces)) value)
-    (if (memq value ivy-minibuffer-faces)
-        'nil
-      value)))
-
-(defun bl/ivy--highlight-ignore-order (str)
-  "Highlight the display strings in ivy instead of the actual candidate."
-  (if (text-property-any 0 (length str) 'display 'nil str)
-      (bl/map-text-properties str 'display (lambda (s)
-        (ivy--highlight-ignore-order (bl/map-text-properties s 'face 'bl/remove-ivy-faces))))
-    (ivy--highlight-ignore-order str)))
-
-(defun bl/org-roam-search-highlighting (fun &rest args)
-  "This display string only custom highlighter breaks other finds so only do it for org-roam"
-  (let ((ivy-highlight-functions-alist '((ivy--regex-ignore-order . bl/ivy--highlight-ignore-order)
-                                         (ivy--regex-fuzzy . ivy--highlight-fuzzy)
-                                         (ivy--regex-plus . ivy--highlight-default))))
-    (apply fun args)))
 
 (defun bl/org-roam-node-doom-tags (tags)
   "Remove ignored tags from the roam search formatting.
@@ -749,6 +676,7 @@ top-level is there are none in the file."
 (custom-set-faces!
   '((org-block markdown-code-face) :background nil))
 
+;; Citation Related settings
 (defvar lit-note-template (concat ":properties:\n"
                                   ":author: ${author-abbrev}\n"
                                   ":journal: ${journal}\n"
@@ -773,6 +701,7 @@ top-level is there are none in the file."
 (use-package! oc-csl
   :after oc
   :config
+  ;; Setup my HTML export to use my modified ACL style.
   (setq org-cite-export-processors '((html csl "association-for-computational-linguistics.csl")
                                      (latex org-ref-cite)
                                      (t basic))))
@@ -780,12 +709,14 @@ top-level is there are none in the file."
 (use-package! citeproc
   :after oc-csl)
 
-(after! citar
+(use-package! citar
+  :after org
   :config
   (set-face-attribute 'org-cite nil :foreground "DarkSeaGreen4")
   (set-face-attribute 'org-cite-key nil :foreground "forest green")
   (setq citar-bibliography bib)
   (setq citar-notes-paths (list lit))
+  ;; Update the icons for entries in the citar search
   (setq citar-symbols
     `((file ,(all-the-icons-faicon "file-o" :face 'all-the-icons-green :v-adjust -0.1) . " ")
       (note ,(all-the-icons-material "speaker_notes" :face 'all-the-icons-blue :v-adjust -0.3) . " ")
@@ -797,14 +728,13 @@ top-level is there are none in the file."
       (suffix . "          ${=key= id:15}    ${=type=:12}    ${tags keywords:*}")
       (preview . "${author editor} (${year issued date}) ${title}, ${journal journaltitle publisher container-title collection-title}.\n")
       (note . "Notes on ${author editor}, ${title}")))
+  ;; Add print bibliography directives to org files that have citations in them.
   (add-hook! 'org-export-before-parsing-hook #'bl/org-cite--add-bibliography-link))
   ;; Make sure we don't byte complie this function (`#'), we need to read the
   ;; value of `default-directory' which might change.
   ;; (add-hook! 'org-export-before-parsing-hook 'bl/org-export--add-ref-note-links)
 
-;; Stop org-ref from adding keywords to the search template
-;; (setq org-ref-bibtex-completion-add-keywords-field 'nil)
-
+;; Created to wrap 'orb-edit-note
 (defun bl/orb-templates (fun &rest args)
   "Update org roam capture templates to just be the orb ones for orb calls."
   (let ((org-roam-capture-templates orb-capture-templates))
@@ -815,6 +745,7 @@ top-level is there are none in the file."
   :config
   (require 'citar)
   (setq bibtex-completion-bibliography bib)
+  ;; Open notes and populate them with the orb templates.
   (setq citar-open-note-function 'orb-citar-edit-note)
   (setq orb-preformat-keywords
         '("citekey" "title" "url" "file" "author-or-editor" "keywords" "ref"
@@ -871,7 +802,7 @@ so it is not hidden by the final headline being private."
           ;; hidden with CSS) for it. This will force the bibliography to contain a
           ;; reference to this paper (that the note is on). It will also trigger a
           ;; bibliography if there are no other citelinks on the page.
-          (if ref-lookup (insert (format "[cite/t:@%s]\n" ref)))))))
+          (if ref-lookup (insert (format "[cite:@%s]\n" ref)))))))
 
 ;; Several of the next functions are designed to speed up agenda/todo collection
 ;; over my roam files by only searching ones that are marked with a

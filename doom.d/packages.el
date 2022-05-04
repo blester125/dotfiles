@@ -48,31 +48,22 @@
 ;; ...Or *all* packages (NOT RECOMMENDED; will likely break things)
 ;(unpin! t)
 
-(package! flyspell)
-(package! evil-commentary)
-;; (package! org-ref)
-;; (package! ivy-bibtex)
-(package! org-roam-bibtex
-  :recipe (:host github :repo "org-roam/org-roam-bibtex"))
 (unpin! org-roam)
-;; (unpin! ivy)
 (unpin! org-fancy-priorities)
-;; (unpin! bibtex-completion ivy-bibtex)
 (unpin! magit)
 
+(package! evil-commentary)
 (package! visual-fill-column)
+(package! citeproc)
+(package! org-roam-bibtex
+  :recipe (:host github :repo "org-roam/org-roam-bibtex"))
+(package! org-fragtog)
 ;; Configure org-download manually because I was having trouble getting it to work
 ;; with the doom-emacs defaults.
 (package! org-download)
 (package! org-fc
           :recipe (:host github :repo "l3kn/org-fc" :files (:defaults "awk" "demo.org")))
-
 (package! websocket)
 (package! org-roam-ui :recipe (:host github :repo "org-roam/org-roam-ui" :files ("*.el" "out")))
 
 (when WORK (load (concat doom-private-dir "work-packages.el")))
-
-(package! citeproc)
-;; (package! org-ref-cite-core :recipe (:host github :repo "jkitchin/org-ref-cite"))
-;; (package! org-ref-cite :recipe (:host github :repo "jkitchin/org-ref-cite"))
-(package! org-fragtog)
