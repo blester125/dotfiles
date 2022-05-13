@@ -1,0 +1,32 @@
+/* Use et-book font */
+* {
+  text-rendering: optimizeLegibility;
+  font-kerning: auto;
+  font-family: "et-book" !important;
+}
+
+/* Center captions on figure */
+.figure p {
+  text-align: center;
+}
+
+/* Allow link coloring to show through code snippets */
+a>code {
+  color: inherit;
+}
+
+/* Bibliography settings */
+/* Hide a self-ref cite link so this note appears in its own bibliography. */
+.SELFLINK {
+  display: none;
+}
+
+/* Hide the section number of the bibliography header as :title isn't working. */
+.BIBLIOGRAPHY [class^=section-number-] {
+  display: none;
+}
+
+/* Add space between bib entries. */
+.csl-entry {
+  padding-top: 10px;
+}

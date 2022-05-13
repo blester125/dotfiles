@@ -271,7 +271,10 @@ If &optional `force' is supplied, create the drawer if it does not exist."
   :after org
   :config
   ;; TODO(brianlester): Fork this css and move my in html hacks into the css.
-  (defvar org--css-location "https://gongzhitaao.org/orgcss/org.css" "The location where the CSS stylesheet we use for org-mode html exports lives.")
+  (defvar org--css-locations '("https://gongzhitaao.org/orgcss/org.css"
+                               "https://edwardtufte.github.io/et-book/et-book.css"
+                               "https://gitcdn.link/cdn/blester125/dotfiles/master/doom.d/custom-org.css")
+    "The location where the CSS stylesheet we use for org-mode html exports lives.")
   ;; Use hook to add a css header to the file before exporting it.
   (add-hook! 'org-export-before-parsing-hook #'bl/org--add-css-header)
   ;; The directory where exports will live so they aren't littered around our
@@ -356,18 +359,11 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
   (ignore backend)
   (goto-char (bl/org-end-of-property-drawer (point-min)))
   (newline)
-  (insert (format "#+html_head: <link rel=\"stylesheet\" type=\"text/css\" href=\"%s\"/>\n" org--css-location))
-  ;; TODO(brianlester) Move these CSS hacks into an actual style sheet.
-  ;; When we moved to org-roam v2, a lot more things have ids and some things that
-  ;; normally are turned into a `<figure>' tag are now a div with `class=figure'.
-  ;; The CSS i got off the internet isn't setup to handle that. Patch it for now
-  ;; to center figures on export, but look into writing own CSS soon. Need a
-  ;; better background color, or maybe use dark mode?
-  (insert "#+html_head_extra: <style>.figure p {text-align: center;}</style>\n")
-  ;; Use the etbook font everywhere
-  (insert "#+html_head_extra: <style>*{font-family: etbook !important}</style>\n")
-  ;; Use allow link coloring to show through code snippets.
-  (insert "#+html_head_extra: <style>a>code {color: inherit;}</style>\n"))
+  (seq-map
+   (lambda (loc)
+     (insert
+      (format "#+html_head: <link rel=\"stylesheet\" type=\"text/css\" href=\"%s\"/>\n" loc)))
+   org--css-locations))
 
 (defun bl/org-inherited-priority (header)
   "Search parent headings to allow of inheritence of priority."
@@ -677,6 +673,7 @@ top-level is there are none in the file."
   '((org-block markdown-code-face) :background nil))
 
 ;; Citation Related settings
+;; TODO can we update this template to remove things that don't get filled in?
 (defvar lit-note-template (concat ":properties:\n"
                                   ":author: ${author-abbrev}\n"
                                   ":journal: ${journal}\n"
@@ -744,6 +741,7 @@ top-level is there are none in the file."
   :after org-roam
   :config
   (require 'citar)
+  (setq orb-roam-ref-format 'org-cite)
   (setq bibtex-completion-bibliography bib)
   ;; Open notes and populate them with the orb templates.
   (setq citar-open-note-function 'orb-citar-edit-note)
@@ -755,6 +753,12 @@ top-level is there are none in the file."
                                                       ,lit-note-template)
                                    :unnarrowed t)) "Capture when making a lit note")
   (advice-add 'orb-edit-note :around 'bl/orb-templates))
+
+(defun ref-exists-p (citekey)
+  "Check that CITEKEY exists in any of the bibs in `bibtex-completion-bibliography'."
+  (if citekey
+      (let ((warning-suppress-types '((:warning))))
+        (bibtex-completion-get-entry citekey))))
 
 (defun bl/org-cite--add-bibliography-link (backend)
   "If cite links appear in an org file, add a bibliography link so it shows up in export.
@@ -769,25 +773,14 @@ so it is not hidden by the final headline being private."
     (goto-char (point-min))
     (let* ((node (org-roam-node-at-point))
            ;; TODO Handle cases where there are multiple :ROAM_REFS:
-           ;; (ref (when node (plist-get (car (org-roam-node-refs node)) :value)))
            (ref (when node (car (org-roam-node-refs node))))
-           ;; Make sure we don't try to check a key when there isn't a :ROAM_REFS:
            ;; TODO update to org-ref-cite tools?
-           (ref-lookup (when ref (org-ref-key-in-file-p ref (car org-cite-global-bibliography)))))
+           (ref-lookup (ref-exists-p ref)))
       ;; Add a bibliography if we have cite links in the buffer or if the
       ;; :ROAM_REF: is a cite-link
       (when (or ref-lookup
                 (bl/org-ref--get-cite-links-from-buffer)
                 (bl/org-cite--get-citations-from-buffer))
-          (goto-char (bl/org-end-of-property-drawer (point-min)))
-          (newline)
-          ;; Add Extra CSS for a hidden cite link to this current paper.
-          (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.SELFLINK {display: none;}</style>\n")
-          ;; Add Extra CSS to hide the section number of the bibliography as the
-          ;; :title part isn't working.
-          (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.BIBLIOGRAPHY [class^=section-number-] {display: none;}</style>\n")
-          ;; Add Extra CSS to add a bit of space between entries.
-          (insert "#+HTML_HEAD_EXTRA: <style type=\"text/css\">.csl-entry {padding-top: 10px;}</style>\n")
           (goto-char (point-max))
           (newline)
           ;; Add a new headline (which makes sure the bibliography is visible even if
