@@ -266,11 +266,27 @@ If &optional `force' is supplied, create the drawer if it does not exist."
       :m "y" 'org-agenda-year-view
       :m "m" 'org-agenda-month-view)
 
+(defun bl/toggle-debug-css ()
+  "Toggle between using the local custom-org.css file and the remote one."
+  (interactive)
+  (let* ((custom-css-base-url "https://gitcdn.link/cdn/blester125/dotfiles/master/")
+         (custom-css-rel-path "doom.d/custom-org.css")
+         (custom-css-url (concat custom-css-base-url custom-css-rel-path))
+         (custom-css-path (concat (getenv "HOME") "/dotfiles/" custom-css-rel-path)))
+    (let ((to-add 'nil)
+          (to-remove 'nul))
+      (if (seq-contains-p org--css-locations custom-css-url)
+          (setq to-add custom-css-path to-remove custom-css-url)
+        (setq to-add custom-css-url to-remove custom-css-path))
+      (message "Removing %s and adding %s to CSS location lists." to-remove to-add)
+      (setq org--css-locations
+            (append (seq-remove (lambda (u) (string-equal u to-remove)) org--css-locations)
+                    (list to-add))))))
+
 ;; Exporting org files to other formats.
 (use-package! ox
   :after org
   :config
-  ;; TODO(brianlester): Fork this css and move my in html hacks into the css.
   (defvar org--css-locations '("https://gongzhitaao.org/orgcss/org.css"
                                "https://edwardtufte.github.io/et-book/et-book.css"
                                "https://gitcdn.link/cdn/blester125/dotfiles/master/doom.d/custom-org.css")
@@ -446,7 +462,12 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
           :desc "(c)ite a bibliographic entry" "c" 'org-cite-insert
           :desc "open (n)otes on a bibliographic entry" "n" 'citar-open-notes
           :desc "(s)earch notes on bibliographic entries" "s" 'bl/org-roam-lit--counsel-rg
-          :desc "re(l)oad BibTeX (run when refs.bib is updated)" "l" 'citar-refresh)
+          :desc "re(f)resh BibTeX (run when refs.bib is updated)" "f" 'citar-refresh
+          :desc "copy (b)ibliographic entry" "b" 'bl/citar-copy-bibtex
+          :desc "insert (B)ibliographic entry" "B" 'citar-insert-bibtex
+          :desc "copy (r)eference for bibliographic entry" "r" 'citar-copy-reference
+          :desc "(o)pen link for a bibliographic entry" "o" 'citar-open
+          :desc "open (l)ink for a bibliographic entry" "l" 'citar-open-link)
          (:prefix ("a" . "add")
           :desc "Add a (t)ag to the node" "t" 'org-roam-tag-add
           :desc "Add a (r)ef to the node" "r" 'org-roam-ref-add
@@ -706,12 +727,37 @@ top-level is there are none in the file."
 (use-package! citeproc
   :after oc-csl)
 
+(defun bl/citar-copy-bibtex (keys-entries)
+  "Copy bibliographic entry associated with the KEYS-ENTRIES.
+With prefix, rebuild the cache before offering candidates."
+  (interactive (list (citar-select-refs
+                      :rebuild-cache current-prefix-arg)))
+  (dolist (key (citar--extract-keys keys-entries))
+    (bl/citar--copy-bibtex key)))
+
+(defun bl/citar--copy-bibtex (key)
+  "Copy the bibtex entry for KEY."
+  (let* ((bibtex-files
+          (seq-concatenate 'list citar-bibliography (citar--local-files-to-cache)))
+         (entry
+          (with-temp-buffer
+            (bibtex-set-dialect)
+            (dolist (bib-file bibtex-files)
+              (insert-file-contents bib-file))
+            (bibtex-find-entry key)
+            (let ((beg (bibtex-beginning-of-entry))
+                  (end (bibtex-end-of-entry)))
+              (buffer-substring-no-properties beg end)))))
+    (unless (equal entry "")
+      (kill-new entry)
+      (message "Copied: %s" entry))))
+
 (use-package! citar
   :after org
   :config
   (set-face-attribute 'org-cite nil :foreground "DarkSeaGreen4")
   (set-face-attribute 'org-cite-key nil :foreground "forest green")
-  (setq citar-bibliography bib)
+  (setq citar-bibliography (list bib))
   (setq citar-notes-paths (list lit))
   ;; Update the icons for entries in the citar search
   (setq citar-symbols
@@ -725,6 +771,17 @@ top-level is there are none in the file."
       (suffix . "          ${=key= id:15}    ${=type=:12}    ${tags keywords:*}")
       (preview . "${author editor} (${year issued date}) ${title}, ${journal journaltitle publisher container-title collection-title}.\n")
       (note . "Notes on ${author editor}, ${title}")))
+  ;; Add my copy bibtex action to embark menu on an org-cite link.
+  (setq citar-citation-map
+    (let ((map (make-sparse-keymap)))
+      (set-keymap-parent map citar-citation-map)
+      (define-key map (kbd "b") #'bl/citar-copy-bibtex)
+      map))
+  (setq citar-map
+    (let ((map (make-sparse-keymap)))
+      (set-keymap-parent map citar-map)
+      (define-key map (kbd "b") #'bl/citar-copy-bibtex)
+      map))
   ;; Add print bibliography directives to org files that have citations in them.
   (add-hook! 'org-export-before-parsing-hook #'bl/org-cite--add-bibliography-link))
   ;; Make sure we don't byte complie this function (`#'), we need to read the
@@ -757,13 +814,16 @@ top-level is there are none in the file."
 (defun ref-exists-p (citekey)
   "Check that CITEKEY exists in any of the bibs in `bibtex-completion-bibliography'."
   (if citekey
+      ;; Ignore warning when we can't find the key.
       (let ((warning-suppress-types '((:warning))))
         (bibtex-completion-get-entry citekey))))
 
 (defun bl/org-cite--add-bibliography-link (backend)
-  "If cite links appear in an org file, add a bibliography link so it shows up in export.
+  "If cite links appear in an org file, add markup to create a bibliography on export.
 
 We need to parse the buffer for this because we don't have access to the filename.
+
+The BACKEND argument is ignored.
 
 Adds and extra headline (and css it make it invisible) before the bibliography
 so it is not hidden by the final headline being private."
@@ -774,7 +834,6 @@ so it is not hidden by the final headline being private."
     (let* ((node (org-roam-node-at-point))
            ;; TODO Handle cases where there are multiple :ROAM_REFS:
            (ref (when node (car (org-roam-node-refs node))))
-           ;; TODO update to org-ref-cite tools?
            (ref-lookup (ref-exists-p ref)))
       ;; Add a bibliography if we have cite links in the buffer or if the
       ;; :ROAM_REF: is a cite-link
@@ -811,7 +870,7 @@ so it is not hidden by the final headline being private."
     nil 'first-match))
 
 (defun bl/org-tags-update-todo (&optional marker)
-  "Update the TODO filetags in a buffer. Adds a filetag with the value of `marker'."
+  "Update the TODO tags in a buffer by adding a tag with the value of MARKER."
   (unless marker (setq marker (car org-roam--todo-markers)))
   (when (and (not (active-minibuffer-window))
              (org-roam-file-p buffer-file-name))
@@ -826,11 +885,11 @@ so it is not hidden by the final headline being private."
            (message "Failed to remove tag %s, no tag to remove" marker)))))))
 
 (defun bl/like-query (str)
-  "Format a string into a like db query that checks if str is a substring."
+  "Format STR into a db 'like' query that checks if str is a substring."
   (concat "%\"" str "\"%"))
 
 (defun bl/find-tagged-files (tag)
-  "Find all roam-db files tagged with `tag'"
+  "Find all roam-db files tagged with TAG."
   (seq-map
    #'car ;; The db returns tuples for rows so grab the first item from each tuple.
    (org-roam-db-query
@@ -876,7 +935,6 @@ so it is not hidden by the final headline being private."
   (interactive)
   (org-element-map (org-element-parse-buffer) 'link 'bl/org--link-info))
 
-;; TODO Replace with org-ref-cite
 (defun bl/org-ref--split-link (link)
   "Split an org-ref link with multiple parts (paperA,paperB,...) into multiple links."
   (let* ((refs (org-ref-split-and-strip-string (plist-get link :path))))

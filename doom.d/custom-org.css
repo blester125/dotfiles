@@ -30,3 +30,24 @@ a>code {
 .csl-entry {
   padding-top: 10px;
 }
+
+/* Add boarder and the like to example (verbatim) sections of org docs */
+.example {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    font-family: Lucida Console,monospace !important;
+    font-size: 80%;
+    margin: 1em auto;
+    padding: 0.1em 0.5em;
+    position: relative;
+}
+
+/* Make sure src code is monospace. */
+.src {
+    font-family: Lucida Console,monospace !important;
+}
+
+/* Make sure the spans (used for color) in source blocks are monospace. */
+.src>span[class^="org-"] {
+    font-family: Lucida Console,monospace !important;
+}
