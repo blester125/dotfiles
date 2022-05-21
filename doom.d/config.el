@@ -448,6 +448,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
 ;; A Zettelkasten in org mode, the reason I switched
 (use-package! org-roam
   :config
+  (setq +org-roam-auto-backlinks-buffer t)
   (map! :leader
         (:prefix ("r" . "roam")
          :desc "Open org-roam backlink panel" "l" #'org-roam-buffer-toggle
@@ -838,8 +839,7 @@ so it is not hidden by the final headline being private."
       ;; Add a bibliography if we have cite links in the buffer or if the
       ;; :ROAM_REF: is a cite-link
       (when (or ref-lookup
-                (bl/org-ref--get-cite-links-from-buffer)
-                (bl/org-cite--get-citations-from-buffer))
+                (bl/org-cite--get-citation-keys-from-buffer))
           (goto-char (point-max))
           (newline)
           ;; Add a new headline (which makes sure the bibliography is visible even if
@@ -941,17 +941,6 @@ so it is not hidden by the final headline being private."
      (seq-map (lambda (r) (plist-put (copy-tree link) :path r)) refs)
   ))
 
-;; TODO Replace with org-ref-cite
-(defun bl/org-ref--get-cite-links-from-buffer ()
-  "Filter down to only the cite links, splitting multiple citation links.
-
-Note: This requires parsing the current buffer, it is slower than querying the
-org roam cache, but it works for non-org-roam files and it gives the locations
-of the link in the buffer."
-  (interactive)
-  (let* ((cite-links (seq-remove (lambda (e) (not (equal (plist-get e :type) "cite"))) (bl/org--get-links-from-buffer))))
-    (apply #'append (seq-map #'bl/org-ref--split-link cite-links))))
-
 (defun bl/org-end-of-property-drawer (&optional point)
   "Find the end of a property draw at `point'.
 
@@ -964,10 +953,11 @@ at the returned point. I normally call `(newline)' before inserting."
         (+ end (length ":end:"))
       point)))
 
-(defun bl/org-cite--get-citations-from-buffer ()
+(defun bl/org-cite--get-citation-keys-from-buffer ()
+  "Get all citation keys from the current buffer."
   (interactive)
-  (org-element-map (org-element-parse-buffer) 'citation (lambda (x) x)))
-
+  (let ((refs (org-element-map (org-element-parse-buffer) 'citation-reference (lambda (x) x))))
+    (seq-map (lambda (r) (org-element-property :key r)) refs)))
 
 (defun org-html-export-to-html-filename (filename &optional async subtreep visible-only body-only ext-plist)
   "Export an org mode file to html via filename."
@@ -1206,7 +1196,7 @@ We need to use the buffer based parsing so that we have access to the cite-link
 locations."
   (interactive)
   (ignore backend)
-  (let* ((cite-links (bl/org-ref--get-cite-links-from-buffer))
+  (let* ((cite-links (bl/org-cite--get-citation-keys-from-buffer))
          ;; How many characters we have already inserted into the buffer,
          ;; shifting where the ends are now.
          (offset 0))
