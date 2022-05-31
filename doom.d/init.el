@@ -15,6 +15,8 @@
 (defconst WORK ; custom coding setup
   ;; double-negate to extract truthy value
   (not (not (string-match-p "google" (system-name)))))
+(defconst LAPPY
+  (not (not (string-match-p "ThinkPad-25" (system-name)))))
 
 ;; NOTE Move your cursor over a module's name (or its flags) and press 'K' (or
 ;;      'C-c c k' for non-vim users) to view its documentation. This works on

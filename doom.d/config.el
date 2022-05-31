@@ -56,7 +56,10 @@
 
 (when WORK
   (setq mono-size 12)
-  (setq ptich-size 26))
+  (setq pitch-size 14))
+(when LAPPY
+  (setq mono-size 12)
+  (setq pitch-size 14))
 
 ;; Doom exposes five (optional) variables for controlling fonts in Doom. Here
 ;; are the three important ones:
