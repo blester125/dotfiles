@@ -48,6 +48,16 @@
 (setq org-ellipsis " ↴")
 (setq projectile-project-search-path `(,(concat (getenv "HOME") "/dev")))
 
+;; Font Settings
+(defvar mono-font "Input Mono" "The font to use for fixed-width fonts.")
+(defvar mono-size 24 "The size of the fixed-width font.")
+(defvar pitch-font "ETBembo" "The font to use for pitched fonts.")
+(defvar pitch-size 26 "The size of the pitched font.")
+
+(when WORK
+  (setq mono-size 12)
+  (setq ptich-size 26))
+
 ;; Doom exposes five (optional) variables for controlling fonts in Doom. Here
 ;; are the three important ones:
 ;;
@@ -65,8 +75,8 @@
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
 (setq doom-theme 'doom-Iosvkem)
-(setq doom-font (font-spec :family "Input Mono" :size 12)
-      doom-variable-pitch-font (font-spec :family "ETBembo" :size 14))
+(setq doom-font (font-spec :family mono-font :size mono-size)
+      doom-variable-pitch-font (font-spec :family pitch-font :size pitch-size))
 
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
