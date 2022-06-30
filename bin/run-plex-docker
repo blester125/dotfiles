@@ -1,0 +1,22 @@
+#!/usr/bin/bash
+
+CLAIM_ID="$1"
+
+if [[ -z "${CLAIM_ID}" ]]; then
+    echo "usage: ./run-plex-docker.sh claim-id" >&2
+    exit 1
+fi
+
+docker stop plex
+docker rm plex
+docker run \
+    -d \
+    --name plex \
+    --network=host \
+    -e TZ="America/Los_Angeles" \
+    -e PLEX_CLAIM="${CLAIM_ID}" \
+    -v /data/plex/config:/config \
+    -v /tmp:/transcode \
+    -v /data/Videos/Movies:/Movies \
+    -v /data/Videos/TV_Shows:/TV_Shows \
+    linuxserver/plex
