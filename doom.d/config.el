@@ -56,7 +56,7 @@
 
 (when WORK
   (setq mono-size 12)
-  (setq pitch-size 14))
+  (setq pitch-size 16))
 (when LAPPY
   (setq mono-size 12)
   (setq pitch-size 14))
@@ -461,7 +461,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
 ;; A Zettelkasten in org mode, the reason I switched
 (use-package! org-roam
   :config
-  (setq +org-roam-auto-backlinks-buffer t)
+  (setq +org-roam-auto-backlinks-buffer 'nil)
   (map! :leader
         (:prefix ("r" . "roam")
          :desc "Open org-roam backlink panel" "l" #'org-roam-buffer-toggle
@@ -636,7 +636,9 @@ Applies the `shadow' face as a property, like the default doom-tags does."
   ;; Only search org files in the zettelkasten. We also set the prompt to be more informative.
   ;; Note: It uses smart casing search. This means when your search uses lowercase
   ;; it is case-insensitive, but adding an upper case makes it case-sensative
-  (counsel-rg INITIAL-INPUT org-roam-directory "--type org" "org-roam search: "))
+  ;; (counsel-rg INITIAL-INPUT org-roam-directory "--type org" "org-roam search: "))
+  ;; TODO: Update the settings with `consult-ripgrep-command'
+  (consult-ripgrep org-roam-directory))
 
 (defun bl/org-roam-dailies--counsel-rg (&optional INITIAL-INPUT)
   "Full text search with counsel-rg (using ripgrep) specific to searching my journal."
@@ -644,7 +646,8 @@ Applies the `shadow' face as a property, like the default doom-tags does."
   ;; Only search org files in the zettelkasten. We also set the prompt to be more informative.
   ;; Note: It uses smart casing search. This means when your search uses lowercase
   ;; it is case-insensitive, but adding an upper case makes it case-sensative
-  (counsel-rg INITIAL-INPUT (expand-file-name org-roam-dailies-directory org-roam-directory) "--type org" "org-roam-journal search: "))
+  ;; (counsel-rg INITIAL-INPUT (expand-file-name org-roam-dailies-directory org-roam-directory) "--type org" "org-roam-journal search: "))
+  (consult-ripgrep (expand-file-name org-roam-dailies-directory)))
 
 (defun bl/org-roam-lit--counsel-rg (&optional INITIAL-INPUT)
   "Full text search with counsel-rg (using ripgrep) specific to searching my journal."
@@ -652,7 +655,8 @@ Applies the `shadow' face as a property, like the default doom-tags does."
   ;; Only search org files in the zettelkasten. We also set the prompt to be more informative.
   ;; Note: It uses smart casing search. This means when your search uses lowercase
   ;; it is case-insensitive, but adding an upper case makes it case-sensative
-  (counsel-rg INITIAL-INPUT lit "--type org" "org-roam-lit search: "))
+  ;; (counsel-rg INITIAL-INPUT lit "--type org" "org-roam-lit search: "))
+  (consult-ripgrep lit))
 
 (defvar bl/org-roam-create-closest-node-from-search ""
   "When inserting an org-roam link from a `rg' search, create a node on the closet headline. When nil, use the first org-roam node you find.")

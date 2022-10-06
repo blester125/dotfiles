@@ -52,6 +52,7 @@
 (unpin! org-fancy-priorities)
 (unpin! magit)
 
+(package! consult)
 (package! evil-commentary)
 (package! visual-fill-column)
 (package! citeproc)
