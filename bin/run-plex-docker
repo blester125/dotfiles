@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 CLAIM_ID="$1"
 
