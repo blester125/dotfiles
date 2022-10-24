@@ -830,7 +830,8 @@ With prefix, rebuild the cache before offering candidates."
                                    :target (file+head "lit/${citekey}.org"
                                                       ,lit-note-template)
                                    :unnarrowed t)) "Capture when making a lit note")
-  (advice-add 'orb-edit-note :around 'bl/orb-templates))
+  (advice-add 'orb-edit-note :around 'bl/orb-templates)
+  (advice-add 'citar-create-note :override 'orb-edit-note))
 
 (defun ref-exists-p (citekey)
   "Check that CITEKEY exists in any of the bibs in `bibtex-completion-bibliography'."
