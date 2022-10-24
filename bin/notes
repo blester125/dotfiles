@@ -1,0 +1,17 @@
+#!/bin/bash
+
+REMOTE="drive-crypt"
+LOCAL_NOTES="${HOME}/notes/zettelkasten"
+REMOTE_NOTES="notes/zettelkasten"
+
+function push {
+  echo "rclone copy -P --exclude='**.stversions**' $@ ${LOCAL_NOTES} ${REMOTE}:${REMOTE_NOTES}"
+  rclone copy -P --exclude='**.stversions**' $@ "${LOCAL_NOTES}" "${REMOTE}:${REMOTE_NOTES}"
+}
+
+function pull {
+  echo "rclone copy -P --exclude='**.stversions**' $@ ${REMOTE}:${REMOTE_NOTES} ${LOCAL_NOTES}"
+  rclone copy -P --exclude='**.stversions**' $@ "${REMOTE}:${REMOTE_NOTES}" "${LOCAL_NOTES}"
+}
+
+"$@"
