@@ -40,11 +40,13 @@ a>code {
     margin: 1em auto;
     padding: 0.1em 0.5em;
     position: relative;
+    line-height: 1.4em;
 }
 
 /* Make sure src code is monospace. */
 .src {
     font-family: Lucida Console,monospace !important;
+    line-height: 1.4em;
 }
 
 /* Make sure the spans (used for color) in source blocks are monospace. */
