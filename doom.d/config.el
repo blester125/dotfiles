@@ -458,6 +458,14 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
                                                   '(:immediate-finish t)))))
     (apply #'org-roam-node-insert args)))
 
+(defun bl/org-roam-force-full-rebuild ()
+  "When new notes files with new org-ids get added, reparse and rebuild to include them."
+  (interactive)
+  (org-id-update-id-locations)
+  (org-roam-db-clear-all)
+  (org-roam-db-sync)
+  (org-roam-update-org-id-locations))
+
 ;; A Zettelkasten in org mode, the reason I switched
 (use-package! org-roam
   :config
@@ -472,6 +480,7 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
          :desc "(c)apture a new org-roam note" "c" #'org-roam-capture
          :desc "(s)earch notes" "s" 'bl/org-roam--counsel-rg
          :desc "(n)ew Node by converting an org headline" "n" (lambda () (interactive) (org-id-get-create)(save-buffer))
+         :desc "re(b)uild org roam db to capture new org-ids" "b" #'bl/org-roam-force-full-rebuild
          (:prefix ("r" . "research")
           :desc "(c)ite a bibliographic entry" "c" 'org-cite-insert
           :desc "open (n)otes on a bibliographic entry" "n" 'citar-open-notes
