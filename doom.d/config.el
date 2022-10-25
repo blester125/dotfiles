@@ -461,10 +461,14 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
 (defun bl/org-roam-force-full-rebuild ()
   "When new notes files with new org-ids get added, reparse and rebuild to include them."
   (interactive)
-  (org-id-update-id-locations)
-  (org-roam-db-clear-all)
-  (org-roam-db-sync)
-  (org-roam-update-org-id-locations))
+  (if (y-or-n-p-with-timeout "Rebuilding the org-roam cache can be slow, continue? " 10 'nil)
+    (progn
+      (message "Rebuilding Org-roam db and org-id cache")
+      (org-id-update-id-locations)
+      (org-roam-db-clear-all)
+      (org-roam-db-sync)
+      (org-roam-update-org-id-locations))
+    (message "Skipping rebuild, goodbye")))
 
 ;; A Zettelkasten in org mode, the reason I switched
 (use-package! org-roam
