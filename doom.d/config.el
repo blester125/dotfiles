@@ -461,9 +461,10 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
 (defun bl/org-roam-force-full-rebuild ()
   "When new notes files with new org-ids get added, reparse and rebuild to include them."
   (interactive)
-  (if (y-or-n-p-with-timeout "Rebuilding the org-roam cache can be slow, continue? " 10 'nil)
+  (if (y-or-n-p-with-timeout "Rebuilding the org-roam db and org-id cache can be slow, continue? " 10 'nil)
     (progn
       (message "Rebuilding Org-roam db and org-id cache")
+      (delete-file org-roam-db-location)
       (org-id-update-id-locations)
       (org-roam-db-clear-all)
       (org-roam-db-sync)
