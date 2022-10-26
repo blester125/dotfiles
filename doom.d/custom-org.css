@@ -53,3 +53,7 @@ a>code {
 .src>span[class^="org-"] {
     font-family: Lucida Console,monospace !important;
 }
+
+.title {
+  color: #a5573e
+}
