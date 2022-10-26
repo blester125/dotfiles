@@ -468,8 +468,16 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
       (org-id-update-id-locations)
       (org-roam-db-clear-all)
       (org-roam-db-sync)
-      (org-roam-update-org-id-locations))
+      (org-roam-update-org-id-locations)
+      (org-roam-db-sync))
     (message "Skipping rebuild, goodbye")))
+
+(defun bl/org-roam-light-rebuild ()
+  (interactive)
+  (org-id-update-id-locations)
+  (org-roam-db-sync)
+  (org-roam-update-org-id-locations)
+  (org-roam-db-sync))
 
 ;; A Zettelkasten in org mode, the reason I switched
 (use-package! org-roam
@@ -485,7 +493,9 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
          :desc "(c)apture a new org-roam note" "c" #'org-roam-capture
          :desc "(s)earch notes" "s" 'bl/org-roam--counsel-rg
          :desc "(n)ew Node by converting an org headline" "n" (lambda () (interactive) (org-id-get-create)(save-buffer))
-         :desc "re(b)uild org roam db to capture new org-ids" "b" #'bl/org-roam-force-full-rebuild
+         (:prefix ("b" . "re(b)uild")
+          :desc "re(b)uild org roam db to capture new org-ids" "b" #'bl/org-roam-force-full-rebuild
+          :desc "light-weight re(f)resh of org-roam and org-ids" "f" #'bl/org-roam-light-rebuild)
          (:prefix ("r" . "research")
           :desc "(c)ite a bibliographic entry" "c" 'org-cite-insert
           :desc "open (n)otes on a bibliographic entry" "n" 'citar-open-notes
