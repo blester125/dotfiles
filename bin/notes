@@ -6,7 +6,7 @@ REMOTE_NOTES="notes/zettelkasten"
 EXCLUDE_FILE="rclone-exclude.txt"
 
 function push {
-  echo "rclone copy -P --exclude-from=${LOCAL_NOTES}/${EXCLUDE_FILE} $@ ${LOCAL_NOTES} ${REMOTE}:${REMOTE_NOTES}"
+  echo "rclone copy -P --max-age 24h --no-traverse --exclude-from=${LOCAL_NOTES}/${EXCLUDE_FILE} $@ ${LOCAL_NOTES} ${REMOTE}:${REMOTE_NOTES}"
   rclone copy -P --exclude-from="${LOCAL_NOTES}/${EXCLUDE_FILE}" $@ "${LOCAL_NOTES}" "${REMOTE}:${REMOTE_NOTES}"
 }
 
