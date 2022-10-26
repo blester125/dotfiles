@@ -3,15 +3,16 @@
 REMOTE="drive-crypt"
 LOCAL_NOTES="${HOME}/notes/zettelkasten"
 REMOTE_NOTES="notes/zettelkasten"
+EXCLUDE_FILE="rclone-exclude.txt"
 
 function push {
-  echo "rclone copy -P --exclude='**.stversions**' --exclude='**sync-conflict**' $@ ${LOCAL_NOTES} ${REMOTE}:${REMOTE_NOTES}"
-  rclone copy -P --exclude='**.stversions**' --exclude='**sync-conflict**' $@ "${LOCAL_NOTES}" "${REMOTE}:${REMOTE_NOTES}"
+  echo "rclone copy -P --exclude-from=${LOCAL_NOTES}/${EXCLUDE_FILE} $@ ${LOCAL_NOTES} ${REMOTE}:${REMOTE_NOTES}"
+  rclone copy -P --exclude-from="${LOCAL_NOTES}/${EXCLUDE_FILE}" $@ "${LOCAL_NOTES}" "${REMOTE}:${REMOTE_NOTES}"
 }
 
 function pull {
-  echo "rclone copy -P --exclude='**.stversions**' --exclude='**sync-conflict**' $@ ${REMOTE}:${REMOTE_NOTES} ${LOCAL_NOTES}"
-  rclone copy -P --exclude='**.stversions**' --exclude='**sync-conflict**' $@ "${REMOTE}:${REMOTE_NOTES}" "${LOCAL_NOTES}"
+  echo "rclone copy -P --exclude-from=${LOCAL_NOTES}/${EXCLUDE_FILE} $@ ${REMOTE}:${REMOTE_NOTES} ${LOCAL_NOTES}"
+  rclone copy -P --exclude-from="${LOCAL_NOTES}/${EXCLUDE_FILE}" $@ "${REMOTE}:${REMOTE_NOTES}" "${LOCAL_NOTES}"
 }
 
 "$@"
