@@ -218,7 +218,8 @@ If &optional `force' is supplied, create the drawer if it does not exist."
    '((python . t)
      (emacs-lisp . t)
      (shell . t)
-     (scheme . t)))
+     (scheme . t)
+     (dot . t)))
   (setq org-src-fontify-natively 't)  ;; Use syntax highlighting for code blocks.
   ;; The available TODO states, the ones after the "|" are considered finished.
   (setq org-todo-keywords
