@@ -93,7 +93,8 @@
        ;;vterm             ; the best terminal emulation in Emacs
 
        :checkers
-       syntax            ; tasing you for every semicolon you forget
+       (syntax
+         +childframe)                               ; tasing you for every semicolon you forget
        (spell
         ;; +aspell
         +flyspell
@@ -124,6 +125,8 @@
        ;;terraform         ; infrastructure as code
        ;;tmux              ; an API for interacting with tmux
        ;;upload            ; map local to remote projects via ssh/ftp
+       ;; tree-sitter         ; Do I need this with an lsp?
+       ;; Currently tree-sitter changes all the code output classes in html exports
 
        :os
        (:if IS-MAC macos)  ; improve compatibility with macOS
@@ -179,6 +182,7 @@
        (python
         +pyenv
         +cython)
+        ;; +tree-sitter)
         ;;+lsp
         ;;+pyright)           ; beautiful is better than ugly
        ;;qt                ; the 'cutest' gui framework ever

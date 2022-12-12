@@ -172,6 +172,7 @@ If &optional `force' is supplied, create the drawer if it does not exist."
       (when (search-forward-regexp (format ":%s:" property) end 't 1)
         (replace-match (format ":%s:" (downcase property)) 't)))))
 
+
 (defun bl/org-inherited-priority (header)
   "Search parent headings to allow of inheritence of priority."
   (cond
@@ -219,7 +220,8 @@ If &optional `force' is supplied, create the drawer if it does not exist."
      (emacs-lisp . t)
      (shell . t)
      (scheme . t)
-     (dot . t)))
+     (dot . t)
+     (prolog . t)))
   (setq org-src-fontify-natively 't)  ;; Use syntax highlighting for code blocks.
   ;; The available TODO states, the ones after the "|" are considered finished.
   (setq org-todo-keywords
@@ -273,6 +275,8 @@ If &optional `force' is supplied, create the drawer if it does not exist."
                                                          (- (match-end 0) 3)
                                                          '(invisible t)))))))
 
+(use-package! graphviz-dot-mode
+  :after org)
 
 ;; Keybinding for monthly and yearly agenda views.
 (map! :after evil-org-agenda
@@ -394,19 +398,6 @@ Checks is the link is in a /images/ subdir or ends with a commong image file ext
      (insert
       (format "#+html_head: <link rel=\"stylesheet\" type=\"text/css\" href=\"%s\"/>\n" loc)))
    org--css-locations))
-
-(defun bl/org-inherited-priority (header)
-  "Search parent headings to allow of inheritence of priority."
-  (cond
-   ;; Priority cookie in this heading
-   ((string-match org-priority-regexp header)
-    (* 1000 (- org-priority-lowest (org-priority-to-value (match-string 2 header)))))
-   ;; No priority cookite by we are a top level header
-   ((not (org-up-heading-safe))
-    (* 1000 (- org-priority-lowest org-priority-default)))
-   ;; Look for the parent's priority
-   (t
-    (bl/org-inherited-priority (org-get-heading)))))
 
 ;; Set the characters that different priorities are displayed as.
 (after! org-fancy-priorities

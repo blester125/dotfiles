@@ -66,5 +66,7 @@
           :recipe (:host github :repo "l3kn/org-fc" :files (:defaults "awk" "demo.org")))
 (package! websocket)
 (package! org-roam-ui :recipe (:host github :repo "org-roam/org-roam-ui" :files ("*.el" "out")))
+(package! graphviz-dot-mode)
+(package! ob-prolog)
 
 (when WORK (load (concat doom-private-dir "work-packages.el")))
