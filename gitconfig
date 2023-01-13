@@ -8,11 +8,10 @@
 [push]
 	default = simple
 [core]
-    editor = vim
+	editor = vim
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
-	process = git-lfs filter-process
 	required = true
 [user]
 	email = blester125@gmail.com
@@ -20,4 +19,15 @@
 [credential]
 	helper = store
 [credential "https://bitbucket.org"]
-    helper = store
+	helper = store
+[filter "cml"]
+	clean = git-cml-filter clean %f
+	smudge = git-cml-filter smudge %f
+	required = true
+[filter "theta"]
+	clean = git-theta-filter clean %f
+	smudge = git-theta-filter smudge %f
+	required = true
+[merge "theta"]
+	name = Merge Models with Git-Theta
+	driver = git-theta-merge %O %A %B %P
