@@ -13,7 +13,8 @@ docker run \
     -d \
     --name plex \
     --network=host \
-    -e TZ="America/Los_Angeles" \
+    --restart=unless-stopped \
+    -e TZ="America/New_York" \
     -e PLEX_CLAIM="${CLAIM_ID}" \
     -v /data/plex/config:/config \
     -v /tmp:/transcode \

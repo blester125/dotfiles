@@ -1,0 +1,12 @@
+#!/bin/bash
+
+docker stop homeassistant
+docker rm homeassistant
+docker run \
+    -d \
+    --name homeassistant \
+    --restart=unless-stopped \
+    --network=host \
+    -e TZ="America/New_York" \
+    -v ${HOME}/.config/homeassistant/ha.conf:/config \
+    ghcr.io/home-assistant/home-assistant:stable
