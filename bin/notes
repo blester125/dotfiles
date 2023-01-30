@@ -1,18 +1,39 @@
 #!/bin/bash
 
+# rclone remote name
 REMOTE="drive-crypt"
+# Where the local notes live
 LOCAL_NOTES="${HOME}/notes/zettelkasten"
+# Where the remote notes live within the named remote.
 REMOTE_NOTES="notes/zettelkasten"
+# A file (assumed to be the notes dir) that track what files are not worth
+# syncing, things like latex intermediate files and syncthing metadata.
 EXCLUDE_FILE="rclone-exclude.txt"
 
+# Push notes from local to remote, overwriting any changes on the remote.
 function push {
   echo "rclone copy -P --max-age 24h --no-traverse --exclude-from=${LOCAL_NOTES}/${EXCLUDE_FILE} $@ ${LOCAL_NOTES} ${REMOTE}:${REMOTE_NOTES}"
   rclone copy -P --exclude-from="${LOCAL_NOTES}/${EXCLUDE_FILE}" $@ "${LOCAL_NOTES}" "${REMOTE}:${REMOTE_NOTES}"
 }
 
+# Pull notes from remote to local, overwriting any local changes.
 function pull {
   echo "rclone copy -P --exclude-from=${LOCAL_NOTES}/${EXCLUDE_FILE} $@ ${REMOTE}:${REMOTE_NOTES} ${LOCAL_NOTES}"
   rclone copy -P --exclude-from="${LOCAL_NOTES}/${EXCLUDE_FILE}" $@ "${REMOTE}:${REMOTE_NOTES}" "${LOCAL_NOTES}"
 }
 
+# Check that notes are in sync between local and remote.
+function check {
+  echo "rclone cryptcheck --exclude-from=${LOCAL_NOTES}/${EXCLUDE_FILE} $@ ${LOCAL_NOTES} ${REMOTE}:${REMOTE_NOTES}"
+  rclone cryptcheck --exclude-from="${LOCAL_NOTES}/${EXCLUDE_FILE}" $@ "${LOCAL_NOTES}" "${REMOTE}:${REMOTE_NOTES}"
+}
+
+# Sync notes between local and remote, taking the most recent file from each
+# side.
+function sync {
+  echo "rclone bisync --exclude-from=${LOCAL_NOTES}/${EXCLUDE_FILE} --verbose $@ ${LOCAL_NOTES} ${REMOTE}:${REMOTE_NOTES}"
+  rclone bisync --exclude-from="${LOCAL_NOTES}/${EXCLUDE_FILE}" --verbose $@ "${LOCAL_NOTES}" "${REMOTE}:${REMOTE_NOTES}"
+}
+
+# Call the function at ${1} with the rest of the arguments.
 "$@"

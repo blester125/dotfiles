@@ -44,6 +44,10 @@
   :hook
   (visual-line-mode . visual-fill-column-mode))
 
+;; compat-string-width is used by some packages but is missing.
+(defun compat-string-width (STRING &optional FROM TO)
+  (string-width STRING FROM TO))
+
 ;; The symbol used when you have an org header closed.
 (setq org-ellipsis " ↴")
 (setq projectile-project-search-path `(,(concat (getenv "HOME") "/dev")))
@@ -329,6 +333,8 @@ If &optional `force' is supplied, create the drawer if it does not exist."
   (advice-add 'org-html--priority :override 'bl/org-html--priority)
   ;; Don't create a table of contents.
   (setq org-export-with-toc 'nil)
+  ;; Don't crash on a broken link.
+  (setq org-export-with-broken-links 'mark)
   ;; Use CSS classes/ids to style, not inline style attributes.
   (setq org-html-htmlize-output-type 'css)
   ;; Include priorities in the export
@@ -1484,83 +1490,6 @@ function to be run often, just when you are initializing a new computer.
 
 (setq +ligatures-extras-in-modes '('not 'python-mode))
 
-;; (after! elfeed
-;;   :config
-;;   (add-hook! 'elfeed-search-mode-hook 'elfeed-update)
-;;   (defun concatenate-authors (authors-list)
-;;     "Given AUTHORS-LIST, list of plists; return string of all authors concatenated."
-;;     (if (> (length authors-list) 1)
-;;         (format "%s et al." (plist-get (nth 0 authors-list) :name))
-;;       (plist-get (nth 0 authors-list) :name)))
-
-;;   ;; (defun bl/get-category (cats)
-;;   ;;   (let ((ret 'nil))
-;;   ;;     (dolist (cat (reverse bl/arxiv-categories) ret)
-;;   ;;       (if (member cat cats)
-;;   ;;           (setq ret cat)))
-;;   ;;     (if ret
-;;   ;;         ret
-;;   ;;       (car cats))))
-
-;;   (defun my-search-print-fn (entry)
-;;     "Print ENTRY to the buffer."
-;;     (let* ((date (elfeed-search-format-date (elfeed-entry-date entry)))
-;;            (title (or (elfeed-meta entry :title)
-;;                       (elfeed-entry-title entry) ""))
-;;            (title-faces (elfeed-search--faces (elfeed-entry-tags entry)))
-;;            (categories (elfeed-meta entry :categories))
-;;            ;; (category (bl/get-category categories))
-;;            (category (car categories))
-;;            (category-column (elfeed-format-column category 7 :left))
-;;            (entry-authors (concatenate-authors
-;;                            (elfeed-meta entry :authors)))
-;;            (title-width (- (window-width) 10
-;;                            elfeed-search-trailing-width))
-;;            (title-column (elfeed-format-column
-;;                           title title-width
-;;                           :left))
-;;            ;; (entry-score (elfeed-format-column (number-to-string (elfeed-score-scoring-get-score-from-entry entry)) 10 :left))
-;;            (authors-column (elfeed-format-column entry-authors 40 :left)))
-;;       (insert (propertize date 'face 'elfeed-search-date-face) " ")
-;;       (insert (propertize category-column 'face 'shadow
-;;                           'kbd-help (format "%s" categories)) " ")
-;;       (insert (propertize title-column
-;;                           'face title-faces 'kbd-help title) " ")
-;;       (insert (propertize authors-column
-;;                           'kbd-help entry-authors) " ")))
-;;       ;; (insert entry-score " ")))
-;;   ;; (defun robo/elfeed-entry-to-arxiv ()
-;;   ;;   "Fetch an arXiv paper into the local library from the current elfeed entry."
-;;   ;;   (interactive)
-;;   ;;   (let* ((link (elfeed-entry-link elfeed-show-entry))
-;;   ;;          (match-idx (string-match "arxiv.org/abs/\\([0-9.]*\\)" link))
-;;   ;;          (matched-arxiv-number (match-string 1 link)))
-;;   ;;     (when matched-arxiv-number
-;;   ;;       (message "Going to arXiv: %s" matched-arxiv-number)
-;;   ;;       (arxiv-get-pdf-add-bibtex-entry matched-arxiv-number robo/main-bib-library robo/main-pdfs-library-path))))
-;;   (map! (:after elfeed
-;;          (:map elfeed-search-mode-map
-;;           :desc "Open entry" "m" #'elfeed-search-show-entry)))
-;;          ;; (:map elfeed-show-mode-map
-;;          ;;  :desc "Fetch arXiv paper to the local library" "a" #'bl/elfeed-entry-to-arxiv)))
-;;   (setq elfeed-search-print-entry-function #'my-search-print-fn)
-;;   (setq elfeed-search-date-format '("%y-%m-%d" 10 :left))
-;;   (setq elfeed-search-title-max-width 110)
-;;   (defvar bl/arxiv-categories '("cs.CL" "stat.ML" "cs.AI" "cs.LG" "cs.NE"))
-;;   (setq elfeed-feeds (seq-map #'bl/arxiv-cat-to-url bl/arxiv-categories))
-;;   (setq elfeed-search-filter "@2-week-ago +unread"))
-
-;; (defun bl/arxiv-cat-to-url (cat)
-;;   (format
-;;    "http://export.arxiv.org/api/query?search_query=cat:%s&start=0&max_results=100&sortBy=submittedDate&sortOrder=descending"
-;;    cat))
-
-;; ;; (use-package! elfeed-score
-;; ;;   :after elfeed
-;; ;;   :config
-;; ;;   (elfeed-score-load-score-file "~/.doom.d/elfeed.score") ; See the elfeed-score documentation for the score file syntax
-;; ;;   (setq elfeed-score-serde-score-file "~/.doom.d/elfeed.serde.score")
-;; ;;   (elfeed-score-enable)
-;; ;;   (define-key elfeed-search-mode-map "=" elfeed-score-map))
+(setq magic-mode-alist 'nil)
 
 (when WORK (load (concat doom-private-dir "work-config.el")))
