@@ -8,6 +8,7 @@ if [[ -z "${CLAIM_ID}" ]]; then
 fi
 
 MEDIA_PREFIX="/data/nvme0/"
+CONFIG_PREFIX="/data/hdd"
 
 docker stop plex
 docker rm plex
@@ -18,7 +19,7 @@ docker run \
     --restart=unless-stopped \
     -e TZ="America/New_York" \
     -e PLEX_CLAIM="${CLAIM_ID}" \
-    -v /data/plex/config:/config \
+    -v ${CONFIG_PREFIX}/plex/config:/config \
     -v /tmp:/transcode \
     -v ${MEDIA_PREFIX}/Videos/Movies:/Movies \
     -v ${MEDIA_PREFIX}/Videos/TV_Shows:/TV_Shows \

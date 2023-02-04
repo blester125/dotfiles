@@ -13,6 +13,7 @@
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
 	required = true
+	process = git-lfs filter-process
 [user]
 	email = blester125@gmail.com
 	name = Brian Lester
