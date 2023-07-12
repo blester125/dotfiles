@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Note: This script doesn't do things to protect the password from snooping by
+# other processes on the machine when the dir is unencrypted. Not good for
+# time-shared, designed for simple encryption at rest.
+
+set -e
+
+COMMAND=$1
+FILE=$2
+PASS=$3
+OUT_FILE=$4
+
+if [ -z "${COMMAND}" ] || [ -z "${FILE}" ] || [ -z "${PASS}" ]; then
+  echo "usage: crypt encrypt|decrypt FILE PASS [OUT_FILE]" >&2
+  exit 1
+fi
+
+function encrypt() {
+  if [ -z "${OUT_FILE}" ]; then
+    OUT_FILE=${FILE}.enc
+  fi
+  echo ${OUT_FILE}
+  openssl enc -aes-256-cbc -salt -pbkdf2 -in ${FILE} -out ${OUT_FILE} -pass pass:${PASS}
+}
+
+function decrypt() {
+  if [ -z "${OUT_FILE}" ]; then
+    OUT_FILE=${FILE}.dec
+  fi
+  openssl enc -d -aes-256-cbc -salt -pbkdf2 -in ${FILE} -out ${OUT_FILE} -pass pass:${PASS}
+}
+
+"$@"

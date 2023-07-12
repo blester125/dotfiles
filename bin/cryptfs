@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Note: This script doesn't do things to protect the password from snooping by
+# other processes on the machine when the dir is unencrypted. Not good for
+# time-shared, designed for simple encryption at rest.
+
+set -e
+
+COMMAND=$1
+DIR=$2
+PASS=$3
+
+if [ -z "$COMMAND" ] || [ -z "$DIR" ]; then
+  echo "usage: cryptfs encrypt|decrypt DIR [PASS]" >&2
+  exit 1
+fi
+
+function encrypt() {
+  sudo umount $DIR
+}
+
+function decrypt() {
+  if [ -z "${PASS}" ]; then
+    echo "usage: cryptfs decrypt DIR PASS" >&2
+    exit 1
+  fi
+  sudo mount -t ecryptfs "${DIR}" "${DIR}" -o ecryptfs_key_bytes=32 -o ecryptfs_enable_filename_crypto=y -o ecryptfs_cipher=aes -o ecryptfs_passthrough=n -o key=passphrase:passphrase_passwd="${PASS}"
+}
+
+"$@"

@@ -28,3 +28,5 @@
 [merge "theta"]
 	name = Merge Models with Git-Theta
 	driver = git-theta-merge %O %A %B %P
+[diff "theta"]
+	command = git-theta-diff
